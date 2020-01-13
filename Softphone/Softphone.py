@@ -1,5 +1,5 @@
 
-import pjsuaxt as pji
+import pjsuaxt as pj
 import multiprocessing
 from .CallHandler import CallHandler
 from .AccountHandler import AccountHandler
@@ -131,7 +131,7 @@ class Softphone: # (multiprocessing.Process)
             self.lib.destroy()
 
 
-    def end_call(self, account):
+    def end_call(self):
         """ Hang up an ongoing call for SIP account.
         """
         try:
@@ -241,7 +241,7 @@ class Softphone: # (multiprocessing.Process)
 
             Writes 20ms?/frame of audio data to the specified sink.
         """
-        mem_capture = pj.MemCapture(self.lib, sample_rate=self.media_cfg.clock_rate)
+        mem_capture = pj.MemCapture(self.lib, clock_rate=self.media_cfg.clock_rate) # clock_rate = sample_rate
         mem_capture.create()
         self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
 
@@ -265,15 +265,16 @@ class Softphone: # (multiprocessing.Process)
 
             Play 20ms?/frame of audio data from the specified source.
         """
-        mem_player = pj.MemPlayer(self.lib, sample_rate=self.media_cfg.clock_rate)
+        mem_player = pj.MemPlayer(self.lib, clock_rate=self.media_cfg.clock_rate) # clock_rate = sample_rate
         mem_player.create()
         self.lib.conf_connect(mem_player.port_slot, self.current_call.info().conf_slot)
 
 
         # This must be handled somewhere else in a non-blocking loop.. HOW????
         while True:
-            if (mem_player.get_write_available() > SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
+            if (mem_player.get_write_available() > self.call_audio.sample_period_sec*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
                 data = source.read() # read data from audio source
+                print("DATA:", data)
                 mem_player.put_frame(data) # get audio from pjsip memory
 
 

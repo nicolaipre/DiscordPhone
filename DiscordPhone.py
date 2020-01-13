@@ -6,18 +6,19 @@ import ctypes
 import ctypes.util
 import configparser
 import multiprocessing
-from .Softphone.Softphone import Softphone
+from Softphone.Softphone import Softphone
 from Audio import DiscordBuffer, SoftphoneBuffer
 
 # Fix Discord Opus error
 discord.opus.load_opus(ctypes.util.find_library('opus'))
 discord.opus.is_loaded()
 
-class DiscordPhone(discord.Client, sip_config):
-    def __init__(self):
+class DiscordPhone(discord.Client):
+    def __init__(self, sip_config):
         super().__init__()
 
         # SIP
+        self.config = sip_config
         self.inbound = None
         self.outbound = None
         self.softphone = None
@@ -41,10 +42,10 @@ class DiscordPhone(discord.Client, sip_config):
         self.softphone.set_null_sound_device()
         #self.inbound=self.softphone.register(...)
         self.outbound=self.softphone.register(
-            server  =sip_config['server'],
-            port    =sip_config['port'],
-            username=sip_config['username'],
-            password=sip_config['password']
+            server  =self.config['server'],
+            port    =self.config['port'],
+            username=self.config['username'],
+            password=self.config['secret']
         )
         print("[DiscordPhone]: Attempted SIP registration.")
 
@@ -86,10 +87,10 @@ class DiscordPhone(discord.Client, sip_config):
             if command.author.voice is None:
                 await command.channel.send("Sorry, you are not in a voice channel.")
             else:
-                await command.channel.send("Joining voice channel", command.author.voice.channel.name)
+                await command.channel.send("Joining voice channel: " + command.author.voice.channel.name)
                 self.voiceclient = await command.author.voice.channel.connect()
 
-                self.voiceclient.play("elevator-waiting-music.wav")
+                #self.voiceclient.play("elevator-waiting-music.wav")
                 # TODO: Implement listen() and play() using MultiProcessing.Pipe() with SIP.py
                 #self.voiceclient.listen(discord.UserFilter(...))
 
@@ -97,12 +98,18 @@ class DiscordPhone(discord.Client, sip_config):
         # Call a phone
         if command.content.lower().startswith("!call"):# call, number, spoof
             cmd = command.content.lower().split(" ") # ["!call", "97526703", "13371337"]
+            if len(cmd) != 3:
+                print("param error")
+                return
             number = cmd[1]
-            sip_uri = 'sip:%s@%s:%s' % (number, sip_config['server'], sip_config['port'])
+            sip_uri = 'sip:%s@%s:%s' % (number, self.config['server'], self.config['port'])
 
-            self.softphone.call(outbound, sip_uri)
-            self.softphone.play(self.discord_audio) # Transmit discord audio to call
-            self.voiceclient.play(self.call_audio)  # Transmit call audio to discord
+            self.softphone.call(self.outbound, sip_uri)
+
+            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+            #self.softphone.listen(self.call_audio)
+            #self.softphone.play(self.discord_audio) # Transmit discord audio to call
+            #self.voiceclient.play(self.call_audio)  # Transmit call audio to discord
 
 
         # Answer incoming call
@@ -127,12 +134,17 @@ class DiscordPhone(discord.Client, sip_config):
 #endClass
 
 
+def getConfig(file_name):
+    # if os.path!== file_name: sys.exit(no config file gfound!)
+    cfg = configparser.RawConfigParser()
+    cfg.read(file_name)
+    return dict(cfg)
 
-# Main (make a bot.py out of this)
-config = configparser.RawConfigParser()
-config.read("DiscordPhone.conf")
-config = dict(config.items())
+
+config = getConfig('dp.conf')
+
+token = config['DISCORD']['token']
 
 client = DiscordPhone(config['SIP'])
-client.run(config(['Discord']['token']))
+client.run(token)
 
