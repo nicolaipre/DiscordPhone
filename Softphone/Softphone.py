@@ -223,8 +223,10 @@ class Softphone: # (multiprocessing.Process)
         """ Playback a WAV file into call.
         """
         self.player = self.lib.create_player(file_name)
-        player_slot = self.lib.player_get_slot(player)
+        player_slot = self.lib.player_get_slot(self.player)
         self.lib.conf_connect(player_slot, self.current_call.info().conf_slot) # Wav -> call # WORKS!
+        print("Player slot:", player_slot)
+        print("Playback works with call slot:", self.current_call.info().conf_slot)
 
 
     def stop_playback(self):
@@ -267,16 +269,19 @@ class Softphone: # (multiprocessing.Process)
         """
         mem_player = pj.MemPlayer(self.lib, clock_rate=self.media_cfg.clock_rate) # clock_rate = sample_rate
         mem_player.create()
+        print("Mem player port slot:", mem_player.port_slot)
+        print("Call slot:", self.current_call.info().conf_slot)
+        """
         self.lib.conf_connect(mem_player.port_slot, self.current_call.info().conf_slot)
 
 
         # This must be handled somewhere else in a non-blocking loop.. HOW????
         while True:
-            if (mem_player.get_write_available() > self.call_audio.sample_period_sec*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
+            if (mem_player.get_write_available() > 256*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
                 data = source.read() # read data from audio source
                 print("DATA:", data)
                 mem_player.put_frame(data) # get audio from pjsip memory
-
+        """
 
     def stop_playing(self):
         """ Stop audio stream transmission

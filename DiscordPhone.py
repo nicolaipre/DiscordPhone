@@ -108,8 +108,12 @@ class DiscordPhone(discord.Client):
 
             self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
             #self.softphone.listen(self.call_audio)
-            #self.softphone.play(self.discord_audio) # Transmit discord audio to call
+            self.softphone.play(self.discord_audio) # Transmit discord audio to call
             #self.voiceclient.play(self.call_audio)  # Transmit call audio to discord
+
+        # Debug
+        if command.content.lower().startswith("!debug"):
+            self.softphone.playback("ring.wav")
 
 
         # Answer incoming call
