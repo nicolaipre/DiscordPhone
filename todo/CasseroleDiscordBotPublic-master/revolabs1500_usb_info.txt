@@ -1,0 +1,86 @@
+https://www.freebsddiary.org/APC/usb_hid_usages.php
+
+  INPUT(1)[INPUT]
+    Field(0)
+      Application(Consumer.0001)
+      Usage(2)
+        Consumer.00e9
+        Consumer.00ea
+      Logical Minimum(0)
+      Logical Maximum(1)
+      Report Size(1)
+      Report Count(2)
+      Report Offset(0)
+      Flags( Variable Absolute )
+
+Consumer.00e9 ---> Key.VolumeUp
+Consumer.00ea ---> Key.VolumeDown
+
+Consumer = 0x000c
+
+  INPUT(5)[INPUT]
+    Field(0)
+      Application(000b.0001)
+      Usage(3)
+        000b.002f
+        000b.0020
+        000b.0021
+      Logical Minimum(0)
+      Logical Maximum(1)
+      Report Size(1)
+      Report Count(3)
+      Report Offset(0)
+      Flags( Variable Absolute )
+
+000b.002f ---> Key.?        (Phone Mute)
+000b.0020 ---> Sync.Report  (Hook Switch)
+000b.0021 ---> Sync.Report  (Flash)
+
+0x000b = Telephony
+
+  OUTPUT(5)[OUTPUT]
+    Field(0)
+      Application(000b.0001)
+      Usage(4)
+        LED.0009
+        LED.0017
+        LED.0018
+        LED.0020
+      Logical Minimum(0)
+      Logical Maximum(1)
+      Report Size(1)
+      Report Count(4)
+      Report Offset(0)
+      Flags( Variable Absolute )
+
+
+LED.0009 ---> LED.Mute     (Mute)
+LED.0017 ---> Sync.Report  (Off-Hook)
+LED.0018 ---> Sync.Report  (Ring)
+LED.0020 ---> Sync.Report  (Hold)
+
+
+LED = 0x0008
+
+
+  OUTPUT(3)[OUTPUT]
+    Field(0)
+      Application(000b.0001)
+      Usage(5)
+        000b.002f
+        000b.0020
+        000b.0021
+        000b.0074
+        000b.0026
+      Logical Minimum(0)
+      Logical Maximum(1)
+      Report Size(1)
+      Report Count(5)
+      Report Offset(0)
+      Flags( Variable Absolute )
+
+000b.002f ---> Sync.Report (Phone Mute)
+000b.0020 ---> Sync.Report (Hook Switch)
+000b.0021 ---> Sync.Report (Flash)
+000b.0074 ---> Sync.Report (Answer On/Off)
+000b.0026 ---> Sync.Report (Drop)
