@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: iso-8859-1 -*-
+# coding=utf-8
 
 import threading
 import pjsuaxt as pj

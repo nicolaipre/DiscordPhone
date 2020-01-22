@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: iso-8859-1 -*-
 
 import discord
 
@@ -39,4 +40,5 @@ class SoftphoneBuffer():
         ret_val = self.audio_data.read(self.num_samples)
         raw_data = bytes(ret_val[0])
         return raw_data
+
 

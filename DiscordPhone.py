@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# -*- coding: iso-8859-1 -*-
+# coding=utf-8
 
 import discord
 import asyncio
@@ -8,6 +10,7 @@ import configparser
 import multiprocessing
 from Softphone.Softphone import Softphone
 from Audio import DiscordBuffer, SoftphoneBuffer
+from Casserole import TestAudioSource
 
 # Fix Discord Opus error
 discord.opus.load_opus(ctypes.util.find_library('opus'))
@@ -26,7 +29,7 @@ class DiscordPhone(discord.Client):
 
         # Discord
         self.voiceclient = None
-        self.discord_audio = DiscordBuffer()
+        self.discord_audio = TestAudioSource() #DiscordBuffer()
 
 
     def __del__(self):
@@ -106,10 +109,17 @@ class DiscordPhone(discord.Client):
 
             self.softphone.call(self.outbound, sip_uri)
 
-            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+            #self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
             #self.softphone.listen(self.call_audio)
-            self.softphone.play(self.discord_audio) # Transmit discord audio to call
+            #self.softphone.play(self.discord_audio) # Transmit discord audio to call
             #self.voiceclient.play(self.call_audio)  # Transmit call audio to discord
+
+        # Transmit audio
+        if command.content.lower().startswith("!transmit"):
+            #self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+            #self.softphone.play(self.discord_audio)
+            self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
+
 
         # Debug
         if command.content.lower().startswith("!debug"):

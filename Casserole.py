@@ -23,7 +23,6 @@ class TestAudioSource(discord.PCMAudio):
         self.beatFreq = 0.25 #modulation frequency of the woooOOOOOoooOOOOooooOOOO
         self.volume = 0.50 #0 to 1 range for how loud wooooo should be
         self.time = 0.0 #This audio source's playback time, in seconds.
-        
 
         #Audio data storage buffers
         self.data = [0]*self.NUM_SAMPLES

@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: iso-8859-1 -*-
+# coding=utf-8
 
 import pjsuaxt as pj
 import multiprocessing
@@ -249,9 +252,13 @@ class Softphone: # (multiprocessing.Process)
 
         # This must be handled somewhere else in a non-blocking loop.. HOW????
         while True:
-            if (mem_capture.get_read_available() > SAMPLES_PER_FRAME*2): # why *2?
-                data = mem_player.get_frame() # frame.payload = raw pcm sample data
+            if (mem_capture.get_read_available() > 256*2): # why *2?
+                data = mem_capture.get_frame() # frame.payload = raw pcm sample data
+                print("------HELLO???-----")
+                print(type(data))
+                print(bytes(data))
                 sink.write(data) # write data to audio sink
+                #mem_capture.flush() # flush after data is sent?
 
 
     def stop_listening(self):
@@ -269,19 +276,15 @@ class Softphone: # (multiprocessing.Process)
         """
         mem_player = pj.MemPlayer(self.lib, clock_rate=self.media_cfg.clock_rate) # clock_rate = sample_rate
         mem_player.create()
-        print("Mem player port slot:", mem_player.port_slot)
-        print("Call slot:", self.current_call.info().conf_slot)
-        """
         self.lib.conf_connect(mem_player.port_slot, self.current_call.info().conf_slot)
-
 
         # This must be handled somewhere else in a non-blocking loop.. HOW????
         while True:
             if (mem_player.get_write_available() > 256*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
                 data = source.read() # read data from audio source
-                print("DATA:", data)
+                print(data)
                 mem_player.put_frame(data) # get audio from pjsip memory
-        """
+
 
     def stop_playing(self):
         """ Stop audio stream transmission
