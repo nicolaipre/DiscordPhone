@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: iso-8859-1 -*-
+# -*- coding: latin-1 -*-
 # coding=utf-8
 
 import pjsuaxt as pj
@@ -16,7 +16,7 @@ class Softphone: # (multiprocessing.Process)
     media_cfg = pj.MediaConfig() # look at the options it takes: https://www.pjsip.org/python/pjsua.htm#MediaConfig
 
 
-    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='DiscordPhone', log_level=1, sample_rate=48000, channel_count=8, max_media_ports=8, thread=True):
+    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, sample_rate=48000, channel_count=8, max_media_ports=8, thread=True):
 
         # User-agent config
         self.ua_cfg.max_calls = max_calls
@@ -70,7 +70,7 @@ class Softphone: # (multiprocessing.Process)
             pj.TransportConfig(0) # TransportConfig(host=bind_address, port=bind_port) # TODO: Add bind_address and bind_port here.
         )
 
-        public_sip_uri = "sip:" + username + "@" + str(transport.info().host + ":" + str(transport.info().port)) # Comment out this line if you have a uri in DiscordPhone.conf
+        public_sip_uri = "sip:" + username + "@" + str(transport.info().host + ":" + str(transport.info().port))
         print("[Softphone]: Listening on %s:%d for %s." % (transport.info().host, transport.info().port, public_sip_uri))
         print("[Softphone]: Attempting registration for %s at %s:%s." % (public_sip_uri, server, port) )
 
@@ -212,8 +212,9 @@ class Softphone: # (multiprocessing.Process)
         """
         self.recorder = self.lib.create_recorder(file_name)
         recorder_slot = self.lib.recorder_get_slot(recorder)
+        self.lib.conf_connect(recorder_slot, self.current_call.info().conf_slot) 
         self.lib.conf_connect(self.current_call.info().conf_slot, recorder_slot) # Call -> wav
-
+        # Error: python3: ../src/pjmedia/wav_writer.c:201: pjmedia_wav_writer_port_create: Assertion `fport->bufsize >= PJMEDIA_PIA_AVG_FSZ(&fport->base.info)' failed.
 
     def stop_capturing(self):
         """ Stop capturing call audio to file
@@ -246,7 +247,13 @@ class Softphone: # (multiprocessing.Process)
 
             Writes 20ms?/frame of audio data to the specified sink.
         """
-        mem_capture = pj.MemCapture(self.lib, clock_rate=self.media_cfg.clock_rate) # clock_rate = sample_rate
+        mem_capture = pj.MemCapture(self.lib,
+            clock_rate=self.media_cfg.clock_rate, # 48000 ?
+            sample_per_frame=int((20/1000.0) / (1.0/self.media_cfg.clock_rate)),
+            channel_count=1,
+            bits_per_sample=16 # Stereo, 16-bit
+        ) # clock_rate = sample_rate
+
         mem_capture.create()
         self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
 
@@ -274,7 +281,19 @@ class Softphone: # (multiprocessing.Process)
 
             Play 20ms?/frame of audio data from the specified source.
         """
-        mem_player = pj.MemPlayer(self.lib, clock_rate=self.media_cfg.clock_rate) # clock_rate = sample_rate
+        print("------")
+        print('clock_rate:', self.media_cfg.clock_rate)
+        asd = int((20/1000.0) / (1.0/self.media_cfg.clock_rate))
+        print('Samples per frame', asd)
+        import time
+        time.sleep(10)
+        mem_player = pj.MemPlayer(self.lib,
+            clock_rate=self.media_cfg.clock_rate, # clock_rate = sample_rate
+            sample_per_frame=int((20/1000.0) / (1.0/self.media_cfg.clock_rate)),
+            channel_count=1,
+            bits_per_sample=16 # Stereo, 16-bit
+        )
+
         mem_player.create()
         self.lib.conf_connect(mem_player.port_slot, self.current_call.info().conf_slot)
 

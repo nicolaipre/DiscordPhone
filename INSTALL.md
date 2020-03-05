@@ -29,3 +29,7 @@ unzip voice-recv-mk2.zip
 cd voice-recv-mk2
 python3 setup.py install
 ```
+
+## Clone Softphone repo
+git clone git@github.com:nicolaipre/Softphone.git
+

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: iso-8859-1 -*-
+# -*- coding: latin-1 -*-
 
 import discord
 
@@ -9,7 +9,7 @@ class DiscordBuffer(discord.reader.AudioSink):
     def __init__(self, duration_ms=20):
         self.audio_data = bytearray()
         self.sample_rate = 48000
-        self.sample_width = 2
+        self.sample_width = 1
         self.sample_period_sec = 1.0/self.sample_rate
         self.num_samples = int((duration_ms/1000.0) / self.sample_period_sec) # samples_per_frame
 

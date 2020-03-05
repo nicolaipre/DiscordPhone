@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: iso-8859-1 -*-
+# -*- coding: latin-1 -*-
 # coding=utf-8
 
 import discord
@@ -30,6 +30,7 @@ class DiscordPhone(discord.Client):
         # Discord
         self.voiceclient = None
         self.discord_audio = TestAudioSource() #DiscordBuffer()
+        #self.discord_audio = DiscordBuffer()
 
 
     def __del__(self):
@@ -117,14 +118,20 @@ class DiscordPhone(discord.Client):
         # Transmit audio
         if command.content.lower().startswith("!transmit"):
             #self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
-            #self.softphone.play(self.discord_audio)
-            self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
+            self.softphone.play(self.discord_audio)
+            #self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
 
 
         # Debug
         if command.content.lower().startswith("!debug"):
-            self.softphone.playback("ring.wav")
+            self.softphone.playback("oleivars-fix.wav")
 
+        # Test capture/recording
+        if command.content.lower().startswith("!rec"):
+            self.softphone.capture("lolneger.wav")
+
+        if command.content.lower().startswith("!stoprec"):
+            self.softphone.stop_capturing()
 
         # Answer incoming call
         if command.content.lower().startswith("!answer"):
