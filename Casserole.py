@@ -14,7 +14,7 @@ class TestAudioSource(discord.PCMAudio):
         #PCM Audio encoding constants
         self.SAMP_PERIOD_SEC = 1.0/48000.0 #48 KHz
         self.NUM_SAMPLES = int((duration_ms/1000.0)/self.SAMP_PERIOD_SEC)
-        self.BYTES_PER_SAMP = 4 #Stereo, 16-bit
+        self.BYTES_PER_SAMP = 2 # mono 8 bit (2) #Stereo, 16-bit (4)
         self.NUM_BYTES = self.NUM_SAMPLES * self.BYTES_PER_SAMP
         self.CENTER_DATA_VAL = int(32768) # 16 bit encoding
 

@@ -25,8 +25,8 @@ class CallHandler(pj.CallCallback):
             print("[CallHandler]: Receiver answered the outgoing call.")
 
             # This is what you would do to connect system audio:
-            #self.lib.conf_connect(0, self.call.info().conf_slot)
-            #self.lib.conf_connect(self.call.info().conf_slot, 0)
+            self.lib.conf_connect(0, self.call.info().conf_slot)
+            self.lib.conf_connect(self.call.info().conf_slot, 0)
             # The best thing would probably be to hook all audio up here,
             # since we know the call state is confirmed. However, we do
             # it in functions in softphone instead.

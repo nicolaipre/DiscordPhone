@@ -29,8 +29,8 @@ class DiscordPhone(discord.Client):
 
         # Discord
         self.voiceclient = None
-        self.discord_audio = TestAudioSource() #DiscordBuffer()
-        #self.discord_audio = DiscordBuffer()
+        #self.discord_audio = TestAudioSource() #DiscordBuffer()
+        self.discord_audio = DiscordBuffer()
 
 
     def __del__(self):
@@ -115,23 +115,30 @@ class DiscordPhone(discord.Client):
             #self.softphone.play(self.discord_audio) # Transmit discord audio to call
             #self.voiceclient.play(self.call_audio)  # Transmit call audio to discord
 
-        # Transmit audio
-        if command.content.lower().startswith("!transmit"):
-            #self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+
+
+        # Transmit phone audio to discord
+        if command.content.lower().startswith("!phone2discord"):
+            self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
+            self.voiceclient.play(self.call_audio)
+
+
+        # Transmit discord audio to phone
+        if command.content.lower().startswith("!discord2phone"):
+
+            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
             self.softphone.play(self.discord_audio)
-            #self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
 
-
-        # Debug
-        if command.content.lower().startswith("!debug"):
-            self.softphone.playback("oleivars-fix.wav")
 
         # Test capture/recording
         if command.content.lower().startswith("!rec"):
-            self.softphone.capture("lolneger.wav")
+            self.softphone.capture("call-audio.wav")
+            #self.softphone.playback("oleivars-fix.wav")
 
+        # Stop capturing/recording
         if command.content.lower().startswith("!stoprec"):
             self.softphone.stop_capturing()
+
 
         # Answer incoming call
         if command.content.lower().startswith("!answer"):

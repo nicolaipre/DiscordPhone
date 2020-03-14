@@ -27,10 +27,14 @@ class Softphone: # (multiprocessing.Process)
         self.log_cfg.level = log_level
 
         # Media config
-        self.media_cfg.clock_rate = sample_rate
+        #self.media_cfg.clock_rate = sample_rate
         #self.media_cfg.snd_clock_rate = ??
-        self.media_cfg.channel_count = channel_count
-        self.media_cfg.max_media_ports = max_media_ports
+        #self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
+        #self.media_cfg.audio_frame_ptime = int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
+        #media_cfg.no_vad = True
+        #media_cfg.enable_ice = False
+
+        #self.media_cfg.max_media_ports = max_media_ports
 
         # Lib settings (put this in run() instead when using multiprocessing.Process)
         self.lib = pj.Lib() # Singleton instance
@@ -124,8 +128,7 @@ class Softphone: # (multiprocessing.Process)
             del lck # alex does not have this.. hmm.
 
             #while call.info().media_state != pj.MediaState.ACTIVE: sleep(0.5) # wait for media to become active
-            #self.lib.conf_connect()
-            #self.lib.conf_connect()
+            # conf connect not needed here, CONFIRMED!
 
 
         except pj.Error as e:
@@ -211,9 +214,11 @@ class Softphone: # (multiprocessing.Process)
         """ Save call audio to WAV file.
         """
         self.recorder = self.lib.create_recorder(file_name)
-        recorder_slot = self.lib.recorder_get_slot(recorder)
+        recorder_slot = self.lib.recorder_get_slot(self.recorder)
         self.lib.conf_connect(recorder_slot, self.current_call.info().conf_slot) 
         self.lib.conf_connect(self.current_call.info().conf_slot, recorder_slot) # Call -> wav
+        
+        # Check that buffer size is greater than bytes per frame // ERROR WAS BECAUSE OF MEDIA CONFIG SETTINGS!
         # Error: python3: ../src/pjmedia/wav_writer.c:201: pjmedia_wav_writer_port_create: Assertion `fport->bufsize >= PJMEDIA_PIA_AVG_FSZ(&fport->base.info)' failed.
 
     def stop_capturing(self):
@@ -247,13 +252,17 @@ class Softphone: # (multiprocessing.Process)
 
             Writes 20ms?/frame of audio data to the specified sink.
         """
+        
+        spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
+        print("samples_per_frame:", spf)
+
         mem_capture = pj.MemCapture(self.lib,
-            clock_rate=self.media_cfg.clock_rate, # 48000 ?
-            sample_per_frame=int((20/1000.0) / (1.0/self.media_cfg.clock_rate)),
+            clock_rate=48000, #self.media_cfg.clock_rate, # 48000 ?
+            sample_per_frame=spf,
             channel_count=1,
             bits_per_sample=16 # Stereo, 16-bit
         ) # clock_rate = sample_rate
-
+        
         mem_capture.create()
         self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
 
@@ -261,10 +270,11 @@ class Softphone: # (multiprocessing.Process)
         while True:
             if (mem_capture.get_read_available() > 256*2): # why *2?
                 data = mem_capture.get_frame() # frame.payload = raw pcm sample data
-                print("------HELLO???-----")
-                print(type(data))
-                print(bytes(data))
+                #print("------HELLO???-----")
+                #print("Data type:", type(data))
+                #print("Data len:",  len(data)) # bytes(data)
                 sink.write(data) # write data to audio sink
+                #print("received/wrote data to sink")
                 #mem_capture.flush() # flush after data is sent?
 
 
@@ -287,9 +297,13 @@ class Softphone: # (multiprocessing.Process)
         print('Samples per frame', asd)
         import time
         time.sleep(10)
+
+        spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
+        print("samples_per_frame:", spf)
+
         mem_player = pj.MemPlayer(self.lib,
-            clock_rate=self.media_cfg.clock_rate, # clock_rate = sample_rate
-            sample_per_frame=int((20/1000.0) / (1.0/self.media_cfg.clock_rate)),
+            clock_rate=48000, #self.media_cfg.clock_rate, # clock_rate = sample_rate
+            sample_per_frame=spf,
             channel_count=1,
             bits_per_sample=16 # Stereo, 16-bit
         )
@@ -301,9 +315,12 @@ class Softphone: # (multiprocessing.Process)
         while True:
             if (mem_player.get_write_available() > 256*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
                 data = source.read() # read data from audio source
-                print(data)
-                mem_player.put_frame(data) # get audio from pjsip memory
-
+                #print("------HELLO???-----")
+                #print("Data type:", type(data))
+                #print("Data len:",  len(data)) # bytes(data)
+                #print(data)
+                mem_player.put_frame(data) # get audio from pjsip memory // put a frame from source onto memory player
+                #print("transmitted/played data from source")
 
     def stop_playing(self):
         """ Stop audio stream transmission

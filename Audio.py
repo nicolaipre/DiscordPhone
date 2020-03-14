@@ -11,7 +11,7 @@ class DiscordBuffer(discord.reader.AudioSink):
         self.sample_rate = 48000
         self.sample_width = 1
         self.sample_period_sec = 1.0/self.sample_rate
-        self.num_samples = int((duration_ms/1000.0) / self.sample_period_sec) # samples_per_frame
+        self.num_samples = int((duration_ms/1000.0) / self.sample_period_sec)*2 # samples_per_frame
 
     def write(self, data):
         self.audio_data += data.data
