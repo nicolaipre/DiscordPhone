@@ -28,8 +28,8 @@ class DiscordPhone(discord.Client):
         self.call_audio = SoftphoneBuffer()
 
         # Discord
-        self.voiceclient = None
-        #self.discord_audio = TestAudioSource() #DiscordBuffer()
+        self.voiceclient   = None
+        self.test_audio    = TestAudioSource()
         self.discord_audio = DiscordBuffer()
 
 
@@ -125,15 +125,25 @@ class DiscordPhone(discord.Client):
 
         # Transmit discord audio to phone
         if command.content.lower().startswith("!discord2phone"):
-
             self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
             self.softphone.play(self.discord_audio)
 
 
-        # Test capture/recording
-        if command.content.lower().startswith("!rec"):
+        # Test audio source
+        if command.content.lower().startswith("!testaudio"):
+            self.softphone.play(self.test_audio)
+
+
+        # Record phone to file
+        if command.content.lower().startswith("!recphone"):
             self.softphone.capture("call-audio.wav")
             #self.softphone.playback("oleivars-fix.wav")
+
+
+        # Record discord to file
+        if command.content.lower().startswith("!recdiscord"):
+            self.voiceclient.listen(discord.UserFilter(discord.WaveSink('discord-audio.wav'), command.author))
+
 
         # Stop capturing/recording
         if command.content.lower().startswith("!stoprec"):
@@ -162,14 +172,14 @@ class DiscordPhone(discord.Client):
 #endClass
 
 
-def getConfig(file_name):
+def read_config(file_name):
     # if os.path!== file_name: sys.exit(no config file gfound!)
     cfg = configparser.RawConfigParser()
     cfg.read(file_name)
     return dict(cfg)
 
 
-config = getConfig('dp.conf')
+config = read_config('dp.conf')
 
 token = config['DISCORD']['token']
 

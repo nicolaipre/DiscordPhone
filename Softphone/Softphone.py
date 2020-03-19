@@ -295,8 +295,6 @@ class Softphone: # (multiprocessing.Process)
         print('clock_rate:', self.media_cfg.clock_rate)
         asd = int((20/1000.0) / (1.0/self.media_cfg.clock_rate))
         print('Samples per frame', asd)
-        import time
-        time.sleep(10)
 
         spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
         print("samples_per_frame:", spf)
