@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
-# coding=utf-8
+
+# https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/casseroleBot.py
 
 import discord
 import asyncio
 import ctypes
 import ctypes.util
 import configparser
-import multiprocessing
+
 from Softphone.Softphone import Softphone
 from Audio import DiscordBuffer, SoftphoneBuffer, FuckerIO
 from Casserole import TestAudioSource
@@ -24,12 +25,13 @@ class DiscordPhone(discord.Client):
         self.config = sip_config
         self.inbound = None
         self.outbound = None
+
+        # Softphone
         self.softphone = None
-        self.call_audio = FuckerIO() #SoftphoneBuffer()
+        self.call_audio = FuckerIO()
 
         # Discord
         self.voiceclient   = None
-        self.test_audio    = TestAudioSource()
         self.discord_audio = FuckerIO(discordListen=True) # DiscordBuffer()
 
 

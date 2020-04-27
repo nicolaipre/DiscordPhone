@@ -6,11 +6,12 @@
 
 import pjsuaxt as pj
 import multiprocessing
+
 from threading import Thread
 from .CallHandler import CallHandler
 from .AccountHandler import AccountHandler
 
-class Softphone: # (multiprocessing.Process)
+class Softphone:
 
     # Static config options
     ua_cfg = pj.UAConfig()

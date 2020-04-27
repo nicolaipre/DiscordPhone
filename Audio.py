@@ -4,52 +4,12 @@
 import discord
 import sounddevice as sd
 
-class DiscordBuffer(discord.reader.AudioSink):
-    """ An audio I/O buffer (sink AND source) for Discord
-    """
-    def __init__(self, duration_ms=20):
-        self.audio_data = bytearray()
-        self.sample_rate = 48000
-        self.sample_width = 1
-        self.sample_period_sec = 1.0/self.sample_rate
-        self.num_samples = int((duration_ms/1000.0) / self.sample_period_sec)*2 # samples_per_frame
+# https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/aio.py#L192 # search for stream. 
+# https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/vio.py#L472 # difference get_write_available. One is for pyaudio.
 
-    def write(self, data):
-        self.audio_data += data.data
-
-    def read(self): # TODO: implement freshen (removes played samples)
-        ret_val = self.audio_data.read(self.num_samples)
-        raw_data = bytes(ret_val[0])
-        return raw_data
-    
-
-
-class SoftphoneBuffer(discord.PCMAudio):
-    """ An audio I/O buffer (sink AND source) for Softphone
-    """
-    def __init__(self, duration_ms=20):
-        self.audio_data = bytearray()
-        self.sample_rate = 48000
-        self.sample_width = 2
-        self.sample_period_sec = 1.0/self.sample_rate
-        self.num_samples = int((duration_ms/1000.0) / self.sample_period_sec)
-
-    def write(self, data):
-        self.audio_data += data
-
-    def read(self): # TODO: implement freshen (removes played samples)
-        ret_val = self.audio_data.read(self.num_samples)
-        raw_data = bytes(ret_val[0])
-        return raw_data
-
-
-
-
- # Maybe sounddevice.RawStream can be used to write/read instead of this implementation?
-
-
+# Maybe sounddevice.RawStream can be used to write/read instead of this implementation?
 # FUCKING WORKS FOR PHONE2DISCORD!!!!!
-class FuckerIO: # discord.PCMAudio, discord.reader.AudioSink
+class IOStream(discord.PCMAudio, discord.reader.AudioSink): # Make this IOBuffer with write() and read() with slicing-on-read methods. 
     """IOStream.. Shouuld be doable with sounddevice...
     See https://python-sounddevice.readthedocs.io/en/0.3.12/api.html#sounddevice.playrec
     """
@@ -59,7 +19,7 @@ class FuckerIO: # discord.PCMAudio, discord.reader.AudioSink
         self.sample_period_sec = 1.0/self.sample_rate
         self.num_samples = int( (duration_ms/1000.0) / self.sample_period_sec )
 
-        self.audio_stream = sd.RawStream(
+        self.audio_stream = sd.RawStream( # This will not work properly. Reason it worked is because of computer speakers and mic probably.. Use buffer instead. 
             samplerate=self.sample_rate, 
             channels=1, 
             dtype='int16', #bits_per_sample ?
@@ -79,3 +39,8 @@ class FuckerIO: # discord.PCMAudio, discord.reader.AudioSink
         retVal = self.audio_stream.read(self.num_samples)
         rawData = bytes(retVal[0])
         return rawData # return to .play() 
+
+
+    # https://gist.github.com/Apfelin/c9cbb7988a9d8e55d77b06473b72dd57
+    def freshen(self, idx):
+		self.bytearr_buf = self.bytearr_buf[idx:]
