@@ -9,7 +9,7 @@ import ctypes.util
 import configparser
 import multiprocessing
 from Softphone.Softphone import Softphone
-from Audio import DiscordBuffer, SoftphoneBuffer
+from Audio import DiscordBuffer, SoftphoneBuffer, FuckerIO
 from Casserole import TestAudioSource
 
 # Fix Discord Opus error
@@ -25,12 +25,12 @@ class DiscordPhone(discord.Client):
         self.inbound = None
         self.outbound = None
         self.softphone = None
-        self.call_audio = SoftphoneBuffer()
+        self.call_audio = FuckerIO() #SoftphoneBuffer()
 
         # Discord
         self.voiceclient   = None
         self.test_audio    = TestAudioSource()
-        self.discord_audio = DiscordBuffer()
+        self.discord_audio = FuckerIO(discordListen=True) # DiscordBuffer()
 
 
     def __del__(self):
@@ -117,7 +117,7 @@ class DiscordPhone(discord.Client):
 
 
 
-        # Transmit phone audio to discord
+        # Transmit phone audio to discord - WORKSSSSSSS
         if command.content.lower().startswith("!phone2discord"):
             self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
             self.voiceclient.play(self.call_audio)
@@ -125,8 +125,20 @@ class DiscordPhone(discord.Client):
 
         # Transmit discord audio to phone
         if command.content.lower().startswith("!discord2phone"):
-            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author)) # for some reason this is sent to discord no matter what...
             self.softphone.play(self.discord_audio)
+
+
+        # Relay phone audio
+        if command.content.lower().startswith("!relayphone"):
+            self.softphone.listen(self.call_audio)
+            self.softphone.play(self.call_audio)  # for some reason this is sent to discord audio no matter what... 
+
+
+        # Relay discord audio
+        if command.content.lower().startswith("!relaydiscord"):
+            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+            self.voiceclient.play(self.discord_audio)
 
 
         # Test audio source

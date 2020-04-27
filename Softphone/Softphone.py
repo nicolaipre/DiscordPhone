@@ -2,8 +2,11 @@
 # -*- coding: latin-1 -*-
 # coding=utf-8
 
+# https://github.com/probonopd/OpenPhone/blob/master/openphone.py
+
 import pjsuaxt as pj
 import multiprocessing
+from threading import Thread
 from .CallHandler import CallHandler
 from .AccountHandler import AccountHandler
 
@@ -16,7 +19,7 @@ class Softphone: # (multiprocessing.Process)
     media_cfg = pj.MediaConfig() # look at the options it takes: https://www.pjsip.org/python/pjsua.htm#MediaConfig
 
 
-    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, sample_rate=48000, channel_count=8, max_media_ports=8, thread=True):
+    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, sample_rate=48000, channel_count=1, max_media_ports=8, thread=True):
 
         # User-agent config
         self.ua_cfg.max_calls = max_calls
@@ -27,7 +30,7 @@ class Softphone: # (multiprocessing.Process)
         self.log_cfg.level = log_level
 
         # Media config
-        #self.media_cfg.clock_rate = sample_rate
+        self.media_cfg.clock_rate = sample_rate
         #self.media_cfg.snd_clock_rate = ??
         #self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
         #self.media_cfg.audio_frame_ptime = int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
@@ -44,6 +47,10 @@ class Softphone: # (multiprocessing.Process)
         # Playback / Recording varaibles
         self.player = None
         self.recorder = None
+
+        # Listen and Play threads
+        self.listen_thread = None
+        self.play_thread = None
 
         # Call variables
         self.call_handler = True
@@ -244,15 +251,15 @@ class Softphone: # (multiprocessing.Process)
         self.lib.player_destroy(self.player)
         self.player = None
 
-
-    def listen(self, sink): # TODO: Figure out where to put read_write_audio() such that the audio gets handled at the right place
-        """ Listen to the current call.
-            Receive a stream of PCM audio from call (memory).
-            Sink must be an object with a write().
-
-            Writes 20ms?/frame of audio data to the specified sink.
+    
+    # WORKS!!
+    def _listen_loop(self, sink):
+        """ Internal method used for threading
         """
-        
+        self.lib.thread_register("ListenThreadddd")
+        # Otherwise getting # python: ../src/pj/os_core_unix.c:692: pj_thread_this: Assertion `!"Calling pjlib from unknown/external thread. 
+        # You must " "register external threads with pj_thread_register() " "before calling any pjlib functions."' failed.
+
         spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
         print("samples_per_frame:", spf)
 
@@ -266,31 +273,63 @@ class Softphone: # (multiprocessing.Process)
         mem_capture.create()
         self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
 
-        # This must be handled somewhere else in a non-blocking loop.. HOW????
+        # This must be handled somewhere else in a non-blocking loop.. HOW???? Like this: https://github.com/UFAL-DSG/alex/blob/master/alex/components/hub/vio.py#L813
         while True:
             if (mem_capture.get_read_available() > 256*2): # why *2?
                 data = mem_capture.get_frame() # frame.payload = raw pcm sample data
                 #print("------HELLO???-----")
                 #print("Data type:", type(data))
                 #print("Data len:",  len(data)) # bytes(data)
-                sink.write(data) # write data to audio sink
+                sink.write(data) # write data to audio sink = FuckerIO
                 #print("received/wrote data to sink")
                 #mem_capture.flush() # flush after data is sent?
 
 
-    def stop_listening(self):
-        """ Stop listening to call
+    # WORKS!!
+    def listen(self, sink): # TODO: Figure out where to put read_write_audio() such that the audio gets handled at the right place
+        """ Listen to the current call.
+            Receive a stream of PCM audio from call (memory).
+            Sink must be an object with a write().
+
+            Writes 20ms?/frame of audio data to the specified sink.
         """
+        # Create a listener thread
+        self.listen_thread = Thread(
+            name='ListenThread',
+            target=self._listen_loop,
+            args=(sink,)
+        )
+        self.listen_thread.start() # Run it...
+
+
+
+
+    def stop_listening(self):
+        self.listen_thread.join() # TODO: Fix possible fuckup here?
         raise NotImplementedError
 
 
-    def play(self, source):
-        """ Play audio from source into call.
-            Transmit a stream of PCM audio to call (memory).
-            Stream must be an object with a read().
 
-            Play 20ms?/frame of audio data from the specified source.
+
+
+
+
+
+
+
+
+
+
+    ### BELOW DOES NOT WORK 100% YET! 
+
+    def _play_loop(self, source):
+        """ Internal method used for threading
         """
+        self.lib.thread_register("PlayThreadddd")
+        # Otherwise getting # python: ../src/pj/os_core_unix.c:692: pj_thread_this: Assertion `!"Calling pjlib from unknown/external thread. 
+        # You must " "register external threads with pj_thread_register() " "before calling any pjlib functions."' failed.
+
+
         print("------")
         print('clock_rate:', self.media_cfg.clock_rate)
         asd = int((20/1000.0) / (1.0/self.media_cfg.clock_rate))
@@ -300,7 +339,7 @@ class Softphone: # (multiprocessing.Process)
         print("samples_per_frame:", spf)
 
         mem_player = pj.MemPlayer(self.lib,
-            clock_rate=48000, #self.media_cfg.clock_rate, # clock_rate = sample_rate
+            clock_rate=48000, # 48000, #self.media_cfg.clock_rate, # clock_rate = sample_rate
             sample_per_frame=spf,
             channel_count=1,
             bits_per_sample=16 # Stereo, 16-bit
@@ -312,7 +351,8 @@ class Softphone: # (multiprocessing.Process)
         # This must be handled somewhere else in a non-blocking loop.. HOW????
         while True:
             if (mem_player.get_write_available() > 256*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
-                data = source.read() # read data from audio source
+                data = source.read() # read data from audio source = discord_audio
+                print("Data to be put_frame:", len(data), data)
                 #print("------HELLO???-----")
                 #print("Data type:", type(data))
                 #print("Data len:",  len(data)) # bytes(data)
@@ -320,7 +360,25 @@ class Softphone: # (multiprocessing.Process)
                 mem_player.put_frame(data) # get audio from pjsip memory // put a frame from source onto memory player
                 #print("transmitted/played data from source")
 
-    def stop_playing(self):
-        """ Stop audio stream transmission
+
+
+    def play(self, source):
+        """ Play audio from source into call.
+            Transmit a stream of PCM audio to call (memory).
+            Stream must be an object with a read().
+
+            Play 20ms?/frame of audio data from the specified source.
         """
+        # Create a player thread
+        self.play_thread = Thread(
+            name="PlayThread",
+            target=self._play_loop,
+            args=(source,)
+        )
+        self.play_thread.start() # Run it..
+
+    
+
+    def stop_playing(self):
+        self.play_thread.join() # TODO: Fix possible fuckup here?
         raise NotImplementedError
