@@ -31,9 +31,10 @@ class Softphone:
         self.log_cfg.level = log_level
 
         # Media config
-        self.media_cfg.clock_rate = sample_rate
+        self.media_cfg.clock_rate    = sample_rate
+        self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
         #self.media_cfg.snd_clock_rate = ??
-        #self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
+        
         #self.media_cfg.audio_frame_ptime = int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
         #media_cfg.no_vad = True
         #media_cfg.enable_ice = False
@@ -57,12 +58,12 @@ class Softphone:
         self.call_handler = True
         self.current_call = None
         print("\n")
-        print("[Softphone]: Object created.")
+        print("[Softphone]:\t Object created.")
 
 
     def __del__(self):
         self.lib.destroy()
-        print('[Softphone]: Object destroyed.')
+        print('[Softphone]:\t Object destroyed.')
 
 
     def register(self, server, port, username, password, default_account=False, proxy=None, protocol='UDP', bind_address='127.0.0.1', bind_port=0):
@@ -73,18 +74,18 @@ class Softphone:
         if   protocol == 'UDP': protocol = pj.TransportType.UDP
         elif protocol == 'TCP': protocol = pj.TransportType.TCP
         elif protocol == 'TLS': protocol = pj.TransportType.TLS
-        else: print("[Softphone]: Error - Invalid protocol type.")
+        else: print("[Softphone]:\t Error - Invalid protocol type.")
 
 
-        print("[Softphone]: Creating transport and generating SIP URI.")
+        print("[Softphone]:\t Creating transport and generating SIP URI.")
         transport = self.lib.create_transport(
             protocol,
             pj.TransportConfig(0) # TransportConfig(host=bind_address, port=bind_port) # TODO: Add bind_address and bind_port here.
         )
 
         public_sip_uri = "sip:" + username + "@" + str(transport.info().host + ":" + str(transport.info().port))
-        print("[Softphone]: Listening on %s:%d for %s." % (transport.info().host, transport.info().port, public_sip_uri))
-        print("[Softphone]: Attempting registration for %s at %s:%s." % (public_sip_uri, server, port) )
+        print("[Softphone]:\t Listening on %s:%d for %s." % (transport.info().host, transport.info().port, public_sip_uri))
+        print("[Softphone]:\t Attempting registration for %s at %s:%s." % (public_sip_uri, server, port) )
 
         account_cfg = pj.AccountConfig(
             domain   = server + ":" + port,
@@ -100,9 +101,9 @@ class Softphone:
         account_handler = AccountHandler(lib=self.lib, account=account)
         account.set_callback(account_handler)
 
-        print("[Softphone]: Waiting for registration.")
+        print("[Softphone]:\t Waiting for registration.")
         account_handler.wait()
-        print("[Softphone]: Successfully registered %s, status: %s (%s)." % (public_sip_uri, account.info().reg_status, account.info().reg_reason))
+        print("[Softphone]:\t Successfully registered %s, status: %s (%s)." % (public_sip_uri, account.info().reg_status, account.info().reg_reason))
 
         return account
 
@@ -121,18 +122,18 @@ class Softphone:
         """
         try:
             if self.current_call:
-                print("[Softphone]: Already have a call.")
+                print("[Softphone]:\t Already have a call.")
                 return
 
             if self.lib.verify_sip_url(sip_uri) != 0: # See documentatoon for verify_sip_url (returns 0 if valid)
-                print("[Softphone]: Invalid SIP URI.")
+                print("[Softphone]:\t Invalid SIP URI.")
                 return
 
-            print("[AccountHandler]: Attempting new call to %s" % sip_uri)
+            print("[AccountHandler]:\t Attempting new call to %s" % sip_uri)
             lck = self.lib.auto_lock() # to prevent deadlocks
             call_handler = CallHandler(lib=self.lib)
             self.current_call = account.make_call(sip_uri, cb=call_handler)
-            print('[Softphone]: Current call is %s.' % self.current_call)
+            print('[Softphone]:\t Current call is %s.' % self.current_call)
             del lck # alex does not have this.. hmm.
 
             #while call.info().media_state != pj.MediaState.ACTIVE: sleep(0.5) # wait for media to become active
@@ -140,7 +141,7 @@ class Softphone:
 
 
         except pj.Error as e:
-            print("[Softphone]: Error -", e)
+            print("[Softphone]:\t Error -", e)
             self.current_call = None
             self.lib.destroy()
 
@@ -150,15 +151,15 @@ class Softphone:
         """
         try:
             if not self.current_call:
-                print("[Softphone]: There is no call.")
+                print("[Softphone]:\t There is no call.")
                 return
 
             self.current_call.hangup()
             self.current_call = None
-            print("[Softphone]: Call ended.")
+            print("[Softphone]:\t Call ended.")
 
         except pj.Error as e:
-            print("[Softphone]: Error -", e)
+            print("[Softphone]:\t Error -", e)
 
 
     def get_sound_devices(self):
@@ -187,7 +188,7 @@ class Softphone:
         """ Set NULL sound device / Do not use system audio device.
         """
         self.lib.set_null_snd_dev()
-        print('[Softphone]: Using NULL sound device.')
+        print('[Softphone]:\t Using NULL sound device.')
 
 
     def get_capture_device(self):
@@ -284,6 +285,12 @@ class Softphone:
                 sink.write(data) # write data to audio sink = FuckerIO
                 #print("received/wrote data to sink")
                 #mem_capture.flush() # flush after data is sent?
+
+
+        # https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/aio.py#L192 # search for stream. 
+        # https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/vio.py#L472 # difference get_write_available. One is for pyaudio.
+        # https://gist.github.com/Apfelin/c9cbb7988a9d8e55d77b06473b72dd57
+
 
 
     # WORKS!!

@@ -2,45 +2,47 @@
 # -*- coding: latin-1 -*-
 
 import discord
-import sounddevice as sd
+"""
+from discord.opus import Decoder, BufferedDecoder
 
-# https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/aio.py#L192 # search for stream. 
-# https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/vio.py#L472 # difference get_write_available. One is for pyaudio.
+print(Decoder.SAMPLE_SIZE)                   # num samples?
+print(Decoder.CHANNELS)                      # channels
+print(Decoder.SAMPLE_SIZE//Decoder.CHANNELS) # sample width
+print(Decoder.SAMPLING_RATE)                 # sample_rate
 
-# Maybe sounddevice.RawStream can be used to write/read instead of this implementation?
-# FUCKING WORKS FOR PHONE2DISCORD!!!!!
-class IOStream(discord.PCMAudio, discord.reader.AudioSink): # Make this IOBuffer with write() and read() with slicing-on-read methods. 
-    """IOStream.. Shouuld be doable with sounddevice...
-    See https://python-sounddevice.readthedocs.io/en/0.3.12/api.html#sounddevice.playrec
-    """
-    def __init__(self, discordListen=False, duration_ms=20):
-        self.discordListen = discordListen
-        self.sample_rate = 48000.0 #48 KHz
+self._file.setnchannels(Decoder.CHANNELS)
+self._file.setsampwidth(Decoder.SAMPLE_SIZE//Decoder.CHANNELS)
+self._file.setframerate(Decoder.SAMPLING_RATE)
+"""
+
+class BufferIO(discord.PCMAudio, discord.reader.AudioSink):
+    def __init__(self, duration_ms=20, sample_rate=48000.0, discord_listen=False):
+
+        self.audio_data        = bytearray()
+        self.sample_rate       = sample_rate #48000.0 # 48 KHz
         self.sample_period_sec = 1.0/self.sample_rate
-        self.num_samples = int( (duration_ms/1000.0) / self.sample_period_sec )
+        self.num_samples       = int( (duration_ms/1000.0) / self.sample_period_sec )
+        self.discord_listen    = discord_listen
 
-        self.audio_stream = sd.RawStream( # This will not work properly. Reason it worked is because of computer speakers and mic probably.. Use buffer instead. 
-            samplerate=self.sample_rate, 
-            channels=1, 
-            dtype='int16', #bits_per_sample ?
-            blocksize=self.num_samples
-        )
-        self.audio_stream.start()
 
-    # softphone.write=WORKS, voiceclient.write=WORKS
+    def _read_and_slice(self, n): # Remove first n bytes from bytearray.
+        byte_chunk      = self.audio_data[:n] # Get first n bytes.
+        self.audio_data = self.audio_data[n:] # Remove first n bytes from bytearray, since they have been fetched.
+        return byte_chunk
+
+
     def write(self, data):
-        if self.discordListen == True:
-            self.audio_stream.write(data.data) # ERROR: VoiceData' has no len(), -> Remember data.data because of discord.reader.VoiceData.data!!!!
-        else: # softphoneListen:
-            self.audio_stream.write(data)
+        if self.discord_listen:
+            print("Attempting to write data.data:", type(data.data), len(data.data))
+            self.audio_data += bytes(data.data)
+        else:
+            print("Attempting to write data:", type(data), len(data))
+            self.audio_data += bytes(data)
 
-    # voiceclient.play=WORKS, softphone.play=NOPPPPP
+        print("Buffer size:", len(self.audio_data))
+
+
     def read(self):
-        retVal = self.audio_stream.read(self.num_samples)
-        rawData = bytes(retVal[0])
-        return rawData # return to .play() 
-
-
-    # https://gist.github.com/Apfelin/c9cbb7988a9d8e55d77b06473b72dd57
-    def freshen(self, idx):
-		self.bytearr_buf = self.bytearr_buf[idx:]
+        print("Attempting to read:", self.num_samples*8)
+        samples = self._read_and_slice(self.num_samples*8)
+        return bytes(samples)

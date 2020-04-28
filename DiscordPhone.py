@@ -10,8 +10,7 @@ import ctypes.util
 import configparser
 
 from Softphone.Softphone import Softphone
-from Audio import DiscordBuffer, SoftphoneBuffer, FuckerIO
-from Casserole import TestAudioSource
+from Audio import BufferIO # Must be below softphone import if not pjmedia max ports error????
 
 # Fix Discord Opus error
 discord.opus.load_opus(ctypes.util.find_library('opus'))
@@ -28,24 +27,25 @@ class DiscordPhone(discord.Client):
 
         # Softphone
         self.softphone = None
-        self.call_audio = FuckerIO()
+        self.call_audio = BufferIO()
 
         # Discord
         self.voiceclient   = None
-        self.discord_audio = FuckerIO(discordListen=True) # DiscordBuffer()
+        self.discord_audio = BufferIO(discord_listen=True) # DiscordBuffer()
 
 
     def __del__(self):
         #self.account.unregister()
-        print("[DiscordPhone]: Object destroyed.")
+        print("[DiscordPhone]:\t Object destroyed.")
 
 
     async def on_ready(self):
-        print("[DiscordPhone]: Logged in as:", self.user.name, ":", self.user.id)
-        print("[DiscordPhone]: Running version:", discord.__version__)
-        print("[DiscordPhone]: Initializing softphone object.")
+        print("[DiscordPhone]:\t Logged in as:", self.user.name, "-", self.user.id)
+        print("[DiscordPhone]:\t Running version:", discord.__version__)
+        print("[DiscordPhone]:\t Initializing softphone object.")
         self.softphone = Softphone()
         self.softphone.set_null_sound_device()
+        print("[DiscordPhone]:\t Attempting SIP registration...")
         #self.inbound=self.softphone.register(...)
         self.outbound=self.softphone.register(
             server  =self.config['server'],
@@ -53,26 +53,25 @@ class DiscordPhone(discord.Client):
             username=self.config['username'],
             password=self.config['secret']
         )
-        print("[DiscordPhone]: Attempted SIP registration.")
+        print("[DiscordPhone]:\t I am now ready.")
 
 
     # Handle commands
     async def on_message(self, command):
 
-        # Do not listen to self (when bot repeats commands)
+        # Do not listen to self (bot repeats commands)
         if command.author == self.user:
             return False
 
 
-        # Quit
+        # Quit / die
         if command.content.lower().startswith("!quit"):
             if self.voiceclient:
                 await self.voiceclient.disconnect()
-
             await self.logout()
 
 
-        # Leave
+        # Leave voice channel
         if command.content.lower().startswith("!leave"):
             if self.voiceclient:
                 await self.voiceclient.disconnect()
@@ -95,13 +94,13 @@ class DiscordPhone(discord.Client):
             else:
                 await command.channel.send("Joining voice channel: " + command.author.voice.channel.name)
                 self.voiceclient = await command.author.voice.channel.connect()
-
                 #self.voiceclient.play("elevator-waiting-music.wav")
+
                 # TODO: Implement listen() and play() using MultiProcessing.Pipe() with SIP.py
                 #self.voiceclient.listen(discord.UserFilter(...))
 
 
-        # Call a phone
+        # Call phone
         if command.content.lower().startswith("!call"):# call, number, spoof
             cmd = command.content.lower().split(" ") # ["!call", "97526703", "13371337"]
             if len(cmd) != 3:
@@ -118,60 +117,6 @@ class DiscordPhone(discord.Client):
             #self.voiceclient.play(self.call_audio)  # Transmit call audio to discord
 
 
-
-        # Transmit phone audio to discord - WORKSSSSSSS
-        if command.content.lower().startswith("!phone2discord"):
-            self.softphone.listen(self.call_audio) # listen to call, write to buffer call_audio
-            self.voiceclient.play(self.call_audio)
-
-
-        # Transmit discord audio to phone
-        if command.content.lower().startswith("!discord2phone"):
-            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author)) # for some reason this is sent to discord no matter what...
-            self.softphone.play(self.discord_audio)
-
-
-        # Relay phone audio
-        if command.content.lower().startswith("!relayphone"):
-            self.softphone.listen(self.call_audio)
-            self.softphone.play(self.call_audio)  # for some reason this is sent to discord audio no matter what... 
-
-
-        # Relay discord audio
-        if command.content.lower().startswith("!relaydiscord"):
-            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
-            self.voiceclient.play(self.discord_audio)
-
-
-        # Test audio source
-        if command.content.lower().startswith("!testaudio"):
-            self.softphone.play(self.test_audio)
-
-
-        # Record phone to file
-        if command.content.lower().startswith("!recphone"):
-            self.softphone.capture("call-audio.wav")
-            #self.softphone.playback("oleivars-fix.wav")
-
-
-        # Record discord to file
-        if command.content.lower().startswith("!recdiscord"):
-            self.voiceclient.listen(discord.UserFilter(discord.WaveSink('discord-audio.wav'), command.author))
-
-
-        # Stop capturing/recording
-        if command.content.lower().startswith("!stoprec"):
-            self.softphone.stop_capturing()
-
-
-        # Answer incoming call
-        if command.content.lower().startswith("!answer"):
-            #self.softphone.answer(inbound)
-            #self.softphone.play(self.discord_audio)
-            #self.voiceclient.play(self.call_audio)
-            raise NotImplementedError
-
-
         # Hangup phone call
         if command.content.lower().startswith("!hangup"):
             self.softphone.end_call()
@@ -182,8 +127,89 @@ class DiscordPhone(discord.Client):
             #self.voiceclient.stop_playing()
             #self.voiceclient.stop_listening()
 
-    #endDef
-#endClass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        """ Test-commands below """
+
+        """
+
+        # Transmit phone audio to discord
+        if command.content.lower().startswith("!phone2discord"):
+            self.softphone.listen(self.call_audio)
+            self.voiceclient.play(self.call_audio)
+
+        
+        # Transmit discord audio to phone
+        if command.content.lower().startswith("!discord2phone"):
+            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+            self.softphone.play(self.discord_audio)
+
+
+        # Relay phone audio
+        if command.content.lower().startswith("!relayphone"):
+            self.softphone.listen(self.call_audio)
+            self.softphone.play(self.call_audio)
+
+
+        # Record discord to file - WORKS
+        if command.content.lower().startswith("!recdiscord"):
+            self.voiceclient.listen(discord.UserFilter(discord.WaveSink('discord-audio.wav'), command.author))
+
+
+        # Stop capturing/recording from discord
+        if command.content.lower().startswith("!stoprecdiscord"):
+            self.voiceclient.stop_listening()
+
+
+        # Record phone to file
+        if command.content.lower().startswith("!recphone"):
+            self.softphone.capture("call-audio.wav")
+
+
+        # Stop capturing/recording from softphone
+        if command.content.lower().startswith("!stoprecphone"):
+            self.softphone.stop_capturing()
+
+        """
+
+
+
+
+           
+        #if command.content.lower().startswith("!a"):
+        #    self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
+
+
+        #if command.content.lower().startswith("!c"):
+        #    self.softphone.play(self.discord_audio)
+
+
+        if command.content.lower().startswith("!a"):
+            self.softphone.listen(self.call_audio)
+
+
+        if command.content.lower().startswith("!b"):
+            self.voiceclient.play(self.call_audio)
+        
+
+
+
+
+
 
 
 def read_config(file_name):
@@ -194,9 +220,7 @@ def read_config(file_name):
 
 
 config = read_config('dp.conf')
-
-token = config['DISCORD']['token']
-
+token  = config['DISCORD']['token']
 client = DiscordPhone(config['SIP'])
 client.run(token)
 
