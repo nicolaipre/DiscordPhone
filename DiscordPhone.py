@@ -189,23 +189,32 @@ class DiscordPhone(discord.Client):
 
 
 
-           
+        # TEST 1 -------------------------------------
         #if command.content.lower().startswith("!a"):
         #    self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
 
+        #if command.content.lower().startswith("!b"):
+        #    self.voiceclient.play(self.discord_audio)
+        # --------------------------------------------
 
-        #if command.content.lower().startswith("!c"):
-        #    self.softphone.play(self.discord_audio)
 
 
+        # TEST 2 ------------------------------------
+        #if command.content.lower().startswith("!a"):
+        #    self.softphone.listen(self.call_audio)
+
+        #if command.content.lower().startswith("!b"):
+        #    self.voiceclient.play(self.call_audio)
+        # -------------------------------------------
+
+
+        # Test 3 ------------------------------------
         if command.content.lower().startswith("!a"):
-            self.softphone.listen(self.call_audio)
-
-
-        if command.content.lower().startswith("!b"):
-            self.voiceclient.play(self.call_audio)
+            self.voiceclient.listen(discord.UserFilter(self.discord_audio, command.author))
         
-
+        if command.content.lower().startswith("!b"):
+            self.softphone.play(self.discord_audio)
+        # -------------------------------------------
 
 
 

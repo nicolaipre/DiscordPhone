@@ -20,7 +20,8 @@ class Softphone:
     media_cfg = pj.MediaConfig() # look at the options it takes: https://www.pjsip.org/python/pjsua.htm#MediaConfig
 
 
-    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, sample_rate=48000, channel_count=1, max_media_ports=8, thread=True):
+    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, sample_rate=48000, channel_count=2, max_media_ports=8, thread=True):
+
 
         # User-agent config
         self.ua_cfg.max_calls = max_calls
@@ -266,25 +267,25 @@ class Softphone:
         print("samples_per_frame:", spf)
 
         mem_capture = pj.MemCapture(self.lib,
-            clock_rate=48000, #self.media_cfg.clock_rate, # 48000 ?
-            sample_per_frame=spf,
-            channel_count=1,
-            bits_per_sample=16 # Stereo, 16-bit
-        ) # clock_rate = sample_rate
-        
+            clock_rate=48000,
+            sample_per_frame=960, #spf,
+            channel_count=2,
+            bits_per_sample=16
+        )
+
+        channel_count = 2
+        samples_per_frame = 960
+
         mem_capture.create()
         self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
 
         # This must be handled somewhere else in a non-blocking loop.. HOW???? Like this: https://github.com/UFAL-DSG/alex/blob/master/alex/components/hub/vio.py#L813
         while True:
-            if (mem_capture.get_read_available() > 256*2): # why *2?
-                data = mem_capture.get_frame() # frame.payload = raw pcm sample data
-                #print("------HELLO???-----")
-                #print("Data type:", type(data))
-                #print("Data len:",  len(data)) # bytes(data)
-                sink.write(data) # write data to audio sink = FuckerIO
-                #print("received/wrote data to sink")
-                #mem_capture.flush() # flush after data is sent?
+            if (mem_capture.get_read_available() > samples_per_frame * channel_count): # why *2?
+                data = mem_capture.get_frame() # size = p_mem_capture_var->samples_per_frame * (p_mem_capture_var->bits_per_sample / 2);
+
+                sink.write(data) # write data to audio sink = BufferIO
+                # why 7680 ??? 
 
 
         # https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/aio.py#L192 # search for stream. 
@@ -346,27 +347,37 @@ class Softphone:
         spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
         print("samples_per_frame:", spf)
 
+        #spf = int(spf/2) # dirty hack? :p -> Input frame size: 3840 does not equal mem player frame size: 3840 ???
+
+        # samples_per_frame: 960
+        # bits_per_sample  : 16
+        # p_mem_player_var->samples_per_frame * (p_mem_player_var->bits_per_sample / 2)) 
+        #                                 960 * (16 / 2) # /2 is channel_count. TODO: Fix in C... 
+
+        spf = int(spf*4) # dirty hack? :p
+
         mem_player = pj.MemPlayer(self.lib,
             clock_rate=48000, # 48000, #self.media_cfg.clock_rate, # clock_rate = sample_rate
             sample_per_frame=spf,
-            channel_count=1,
+            channel_count=2,
             bits_per_sample=16 # Stereo, 16-bit
         )
+
+        channel_count = 2
+        samples_per_frame = spf
 
         mem_player.create()
         self.lib.conf_connect(mem_player.port_slot, self.current_call.info().conf_slot)
 
-        # This must be handled somewhere else in a non-blocking loop.. HOW????
-        while True:
-            if (mem_player.get_write_available() > 256*2): #SAMPLES_PER_FRAME*2): # why *2? # same as sample_period_sec ?
-                data = source.read() # read data from audio source = discord_audio
-                print("Data to be put_frame:", len(data), data)
-                #print("------HELLO???-----")
-                #print("Data type:", type(data))
-                #print("Data len:",  len(data)) # bytes(data)
-                #print(data)
-                mem_player.put_frame(data) # get audio from pjsip memory // put a frame from source onto memory player
-                #print("transmitted/played data from source")
+        while True: # Problem is that this C thing reads faster than Python...
+            if (mem_player.get_write_available() > samples_per_frame*channel_count): # Can we write?
+                data = source.read() # Make this wait until there is data in buffer... # Do we have data to write? Check buffer!
+                
+                if data == False:
+                    continue
+                
+                #print("Bytes to put_frame:", len(data))
+                total_bytes_played = mem_player.put_frame(data)
 
 
 
@@ -389,4 +400,3 @@ class Softphone:
 
     def stop_playing(self):
         self.play_thread.join() # TODO: Fix possible fuckup here?
-        raise NotImplementedError
