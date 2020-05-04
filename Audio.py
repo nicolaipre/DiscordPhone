@@ -2,7 +2,6 @@
 # -*- coding: latin-1 -*-
 
 import discord
-
 from discord.opus import Decoder, BufferedDecoder
 
 print(Decoder.SAMPLE_SIZE)                   # num samples? # 4

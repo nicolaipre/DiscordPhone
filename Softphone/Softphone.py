@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
-# coding=utf-8
 
 # https://github.com/probonopd/OpenPhone/blob/master/openphone.py
 
@@ -20,8 +19,13 @@ class Softphone:
     media_cfg = pj.MediaConfig() # look at the options it takes: https://www.pjsip.org/python/pjsua.htm#MediaConfig
 
 
-    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, sample_rate=48000, channel_count=2, max_media_ports=8, thread=True):
+    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, duration_ms=20, sample_rate=48000, channel_count=2, max_media_ports=8, thread=True):
 
+        # User specified Audio settings
+        self.sample_rate       = sample_rate
+        self.samples_per_frame = samples_per_frame
+        self.channel_count     = channel_count
+        self.bits_per_sample   = bits_per_sample
 
         # User-agent config
         self.ua_cfg.max_calls = max_calls
@@ -51,7 +55,7 @@ class Softphone:
         self.player = None
         self.recorder = None
 
-        # Listen and Play threads
+        # Listen / Play threads
         self.listen_thread = None
         self.play_thread = None
 
@@ -257,14 +261,9 @@ class Softphone:
     
     # WORKS!!
     def _listen_loop(self, sink):
-        """ Internal method used for threading
+        """ Listener thread
         """
-        self.lib.thread_register("ListenThreadddd")
-        # Otherwise getting # python: ../src/pj/os_core_unix.c:692: pj_thread_this: Assertion `!"Calling pjlib from unknown/external thread. 
-        # You must " "register external threads with pj_thread_register() " "before calling any pjlib functions."' failed.
-
-        spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
-        print("samples_per_frame:", spf)
+        self.lib.thread_register("ListenThread")
 
         mem_capture = pj.MemCapture(self.lib,
             clock_rate=48000,
@@ -279,42 +278,31 @@ class Softphone:
         mem_capture.create()
         self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
 
-        # This must be handled somewhere else in a non-blocking loop.. HOW???? Like this: https://github.com/UFAL-DSG/alex/blob/master/alex/components/hub/vio.py#L813
         while True:
-            if (mem_capture.get_read_available() > samples_per_frame * channel_count): # why *2?
-                data = mem_capture.get_frame() # size = p_mem_capture_var->samples_per_frame * (p_mem_capture_var->bits_per_sample / 2);
-
-                sink.write(data) # write data to audio sink = BufferIO
-                # why 7680 ??? 
-
-
-        # https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/aio.py#L192 # search for stream. 
-        # https://github.com/UFAL-DSG/alex/blob/72fd963c16e00adea6b8fb6c45441b33fc725f3c/alex/components/hub/vio.py#L472 # difference get_write_available. One is for pyaudio.
-        # https://gist.github.com/Apfelin/c9cbb7988a9d8e55d77b06473b72dd57
+            if (mem_capture.get_read_available() > samples_per_frame * channel_count):
+                data = mem_capture.get_frame()
+                sink.write(data)
 
 
 
-    # WORKS!!
-    def listen(self, sink): # TODO: Figure out where to put read_write_audio() such that the audio gets handled at the right place
+    def listen(self, sink):
         """ Listen to the current call.
             Receive a stream of PCM audio from call (memory).
             Sink must be an object with a write().
 
             Writes 20ms?/frame of audio data to the specified sink.
         """
-        # Create a listener thread
         self.listen_thread = Thread(
-            name='ListenThread',
             target=self._listen_loop,
-            args=(sink,)
+            args  =(sink,)
         )
-        self.listen_thread.start() # Run it...
+        self.listen_thread.start()
 
 
 
 
     def stop_listening(self):
-        self.listen_thread.join() # TODO: Fix possible fuckup here?
+        self.listen_thread.join()
         raise NotImplementedError
 
 
