@@ -78,10 +78,11 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
     def write(self, voiceData): # Make this return 20 ms of data and be 640 bytes
         """Listen to the audio coming from Discord, and write to discord_audio buffer.
         """
-        #self.discord_audio.append(voiceData.data) # raw bytes from VoiceData object.
+        self.discord_audio.append(voiceData.data) # raw bytes from VoiceData object.
         #print("WRITE bytes from discord:", len(data.data), "| Buffer size:", len(self.discord_audio))
 
         # Attempt to let everyone speak:
+        """
         if(voiceData.user is not None):
             speakerID = voiceData.user.id
             self.curSpeakerID = speakerID
@@ -96,7 +97,7 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
             
             self.audio_bytes += voiceDataNp
             self.speakerIDList.append(speakerID)
-
+        """
 
 
 
