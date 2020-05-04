@@ -5,86 +5,114 @@ import discord
 from collections import deque
 from discord.opus import Decoder, BufferedDecoder
 
-print(Decoder.SAMPLE_SIZE)                   # num samples? # 4
-print(Decoder.CHANNELS)                      # channels     # 2
-print(Decoder.SAMPLE_SIZE//Decoder.CHANNELS) # sample width # 2
-print(Decoder.SAMPLING_RATE)                 # sample_rate  # 48000
+#print(Decoder.SAMPLE_SIZE)                   # num samples? # 4
+#print(Decoder.CHANNELS)                      # channels     # 2
+#print(Decoder.SAMPLE_SIZE//Decoder.CHANNELS) # sample width # 2
+#print(Decoder.SAMPLING_RATE)                 # sample_rate  # 48000
 
-"""
-self._file.setnchannels(Decoder.CHANNELS)
-self._file.setsampwidth(Decoder.SAMPLE_SIZE//Decoder.CHANNELS)
-self._file.setframerate(Decoder.SAMPLING_RATE)
-"""
+#self._file.setnchannels(Decoder.CHANNELS)
+#self._file.setsampwidth(Decoder.SAMPLE_SIZE//Decoder.CHANNELS)
+#self._file.setframerate(Decoder.SAMPLING_RATE)
 
 
 class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
-    discord_audio = bytearray()
-    frames = deque() # call_audio
+    def __init__(self, duration_ms=20, sample_rate=48000.0, channel_count=2):
+        self.duration_ms = duration_ms
+        self.sample_rate = sample_rate
+        self.channel_count = channel_count
 
-    # write (used for listen())
-    def cb_put_frame(self, frame):
+        # To get frame size (samples_per_frame)
+        self.sample_period_sec = 1.0/self.sample_rate
+        self.samples_per_frame = int( (duration_ms/1000.0) / self.sample_period_sec )
+
+        self.phone_audio   = deque()
+        self.discord_audio = deque() 
+
+        self.curSpeakerID = None
+        self.speakerIDList = []
+
+    
+    ### phone -> discord ###
+
+    def cb_put_frame(self, frame): # Denne er good! Testet med loopback i telefon
+        """Listen to the audio coming from phone, and write to phone_audio buffer.
+            
+           Phone: Write method
+        """
         # An audio frame arrived, it is a string (i.e. ByteArray)
-        self.frames.append(frame)
-        print(len(frame)) # 640
+        self.phone_audio.append(frame)
+        #print(len(frame))
         # Return an integer; 0 means success, but this does not matter now
-        print("cb_put_frame()")
         return 0
 
-    # read (used for play())
-    def cb_get_frame(self, size):
-        # Audio frame wanted
-        print("cb_get_frame()")
-        if len(self.frames):
-            frame = self.frames.popleft()
-            print(len(frame)) # 640
-            # Send the frame out
+
+
+    # Denne er fucka...
+    def read(self):
+        """Read from discord_audio buffer, and send audio to phone.
+        
+        - Get an audio frame to be played into phone speaker.
+
+           Discord: Read method
+        """
+        #print("jalla_enter")
+        if len(self.phone_audio): # funker når vi relayer discord...
+            frame = self.phone_audio.popleft()
+            #print("jalla_frame")
+            return bytes(frame)
+        else:
+            print("empty frame of null bytes RETURNED") # play stopper når det er tomt for frames. 
+            return b'\x00' * self.samples_per_frame  # Return an empty frame of null bytes
+
+
+
+
+
+
+
+
+    ### discord -> phone ### (denne er good = de to under er good...)
+
+
+    def write(self, voiceData): # Make this return 20 ms of data and be 640 bytes
+        """Listen to the audio coming from Discord, and write to discord_audio buffer.
+        """
+        #self.discord_audio.append(voiceData.data) # raw bytes from VoiceData object.
+        #print("WRITE bytes from discord:", len(data.data), "| Buffer size:", len(self.discord_audio))
+
+        # Attempt to let everyone speak:
+        if(voiceData.user is not None):
+            speakerID = voiceData.user.id
+            self.curSpeakerID = speakerID
+
+            voiceDataNp = np.ndarray(shape=(self.samples_per_frame, 2), dtype='<i2', buffer=voiceData.data)
+
+            if (speakerID in self.speakerIDList):
+                #self.audioStream.write(self.audio_bytes)
+                self.audio_bytes.fill(0)
+                self.speakerIDList = []
+                self.mixedPacketCount += 1
+            
+            self.audio_bytes += voiceDataNp
+            self.speakerIDList.append(speakerID)
+
+
+
+
+
+
+
+
+    def cb_get_frame(self, size): # Denne er good! Testet med loopback i telefon
+        """Read from discord_audio buffer, and send audio to phone.
+        
+        - Get an audio frame to be played into phone speaker.
+
+        1 frame = 640 bytes of audio
+        """
+        if len(self.discord_audio):
+            frame = self.discord_audio.popleft()
             return frame
         else:
-            # Do not emit an audio frame
-            return None
-
-
-    def write(self, frame): # Make this return 20 ms of data and be 640 bytes
-        pass
-
-    def read(self, frame):  # Make this return 20 ms of data and be 640 bytes
-        pass
-
-
-
-
-
-
-
-class BufferIO(discord.PCMAudio, discord.reader.AudioSink):
-    def __init__(self, duration_ms=20, sample_rate=48000.0):
-
-        self.audio_data        = bytearray()
-        self.sample_rate       = sample_rate #48000.0 # 48 KHz
-        self.sample_period_sec = 1.0/self.sample_rate
-        self.samples_per_frame = int( (duration_ms/1000.0) / self.sample_period_sec ) * Decoder.SAMPLE_SIZE
-
-
-    def _read_and_slice(self, n):
-        byte_chunk      = self.audio_data[:n] 
-        self.audio_data = self.audio_data[n:]
-        return bytes(byte_chunk)
-
-
-    def write(self, data):
-        if self.discord_listen:
-            print("WRITE bytes discord:", len(data.data), "| Buffer size:", len(self.audio_data))
-            self.audio_data += bytes(data.data)
-        else:
-            print("WRITE bytes phone..:", len(data), "| Buffer size:", len(self.audio_data))
-            self.audio_data += bytes(data) # TODO: Make this use Utils.Frame() 
-
-
-    def read(self):
-        if len(self.audio_data) <= self.samples_per_frame:
-            return False
-
-        samples = self._read_and_slice(self.samples_per_frame)
-        print("READ  bytes........:", len(samples))
-        return samples
+            return None  # Do not emit an audio frame

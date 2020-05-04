@@ -3,6 +3,7 @@
 # Functional inspiration: https://github.com/probonopd/OpenPhone/blob/master/openphone.py
 
 import pjsua as pj
+import time
 
 from threading import Thread
 from .CallHandler import CallHandler
@@ -17,13 +18,29 @@ class Softphone:
     media_cfg = pj.MediaConfig() # look at the options it takes: https://www.pjsip.org/python/pjsua.htm#MediaConfig
 
 
-    def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, duration_ms=20, sample_rate=48000, channel_count=2, max_media_ports=8, thread=True):
+    def __init__(
+            self, 
+            max_calls=2, 
+            nameserver=['1.1.1.1'], 
+            user_agent='Python Softphone', 
+            log_level=1,
+            sample_rate=48000, 
+            duration_ms=20,
+            channel_count=2,
+            max_media_ports=8,
+            thread=True
+        ):
 
-        # User specified Audio settings
-        #self.sample_rate       = sample_rate
-        #self.samples_per_frame = samples_per_frame
-        #self.channel_count     = channel_count
-        #self.bits_per_sample   = bits_per_sample
+        # Media config
+        self.media_cfg.clock_rate    = sample_rate
+        self.media_cfg.channel_count = channel_count 
+
+
+        #self.media_cfg.snd_clock_rate = # Clock rate to be applied when opening the sound device. If value is zero, conference bridge clock rate will be used.
+        self.media_cfg.audio_frame_ptime = duration_ms # int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
+        #self.media_cfg.no_vad = True # voice activation detection enabled
+        #self.media_cfg.enable_ice = False
+        self.media_cfg.max_media_ports = max_media_ports
 
         # User-agent config
         self.ua_cfg.max_calls = max_calls
@@ -32,17 +49,6 @@ class Softphone:
 
         # Log config
         self.log_cfg.level = log_level
-
-        # Media config
-        #self.media_cfg.clock_rate    = sample_rate
-        #self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
-        #self.media_cfg.snd_clock_rate = ??
-        
-        #self.media_cfg.audio_frame_ptime = int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
-        #media_cfg.no_vad = True
-        #media_cfg.enable_ice = False
-
-        #self.media_cfg.max_media_ports = max_media_ports
 
         # Lib settings (put this in run() instead when using multiprocessing.Process)
         self.lib = pj.Lib() # Singleton instance
@@ -156,6 +162,7 @@ class Softphone:
 
         except pj.Error as e:
             print("[Softphone.....]: Error -", e)
+
 
 
     def get_sound_devices(self):

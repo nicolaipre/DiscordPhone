@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
+# Built with pjproject: https://github.com/nicolaipre/pjproject
+# It is important to use this ^ fork! 
+
 
 # https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/casseroleBot.py
 
@@ -11,8 +14,10 @@ import ctypes
 import ctypes.util
 import configparser
 
+from threading import Thread
+
 from Softphone.Softphone import Softphone
-from Audio import BufferIO, AudioCB # Must be below softphone import if not pjmedia max ports error????
+from Audio import AudioCB # Must be below softphone import if not pjmedia max ports error????
 
 # Fix Discord Opus error
 discord.opus.load_opus(ctypes.util.find_library('opus'))
@@ -34,7 +39,8 @@ class DiscordPhone(discord.Client):
 
 
     def __del__(self):
-        self.account.unregister()
+        self.softphone.unregister(self.outbound)
+        #self.outbound.delete()
         print("[DiscordPhone..]: Object destroyed.")
 
 
@@ -46,7 +52,7 @@ class DiscordPhone(discord.Client):
         self.softphone.set_null_sound_device()
 
         print("[DiscordPhone..]: Attempting SIP registration...")
-        #self.inbound=self.softphone.register(...)
+        #self.inbound=self.softphone.register(...) # TODO: Registration of account for incoming calls
         self.outbound=self.softphone.register(
             server  =self.config['server'],
             port    =self.config['port'],
@@ -56,6 +62,17 @@ class DiscordPhone(discord.Client):
         print("[DiscordPhone..]: I am now ready.")
 
 
+
+
+    async def motherfucker(self):
+        print("Enter mf")
+        #self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author))
+        self.voiceclient.play(self.audio_buffer)
+        print("Leave mf")
+
+
+
+
     # Handle commands
     async def on_message(self, command):
 
@@ -63,6 +80,16 @@ class DiscordPhone(discord.Client):
         if command.author == self.user:
             return False
 
+        # List available commands
+        if command.content.lower().startswith("!commands"):
+            await command.channel.send("""```Available commands:
+!join   -   join a voice channel
+!leave  -   leave a voice channel
+!quit   -   shut down bot
+!hop    -   hop to voice channel
+!call   -   call a phone number
+!hangup -   end a call
+```""")
 
         # Quit / die
         if command.content.lower().startswith("!quit"):
@@ -75,6 +102,7 @@ class DiscordPhone(discord.Client):
         # Leave voice channel
         if command.content.lower().startswith("!leave"):
             if self.voiceclient:
+                await command.channel.send("Leaving voice channel: " + command.author.voice.channel.name)
                 await self.voiceclient.disconnect()
             else:
                 await command.channel.send("Sorry, I am not in a voice channel...")
@@ -99,39 +127,69 @@ class DiscordPhone(discord.Client):
 
 
         # Call phone
-        if command.content.lower().startswith("!call"):# call, number, spoof
+        if command.content.lower().startswith("!call"): # call, number, spoof
             cmd = command.content.lower().split(" ") # ["!call", "97526703", "13371337"]
+            
             if len(cmd) != 3:
                 await command.channel.send("Correct usage: !call <number to call (with 00 for country code)> <caller id>")
-                print("[DiscordPhone..]: Parameter error!")
                 return
+
             number = cmd[1]
             caller_id = cmd[2]
             sip_uri = 'sip:%s@%s:%s' % (number, self.config['server'], self.config['port'])
 
+            async def plz_listen():
+                self.voiceclient.play(self.audio_buffer)
+
             try:
                 self.softphone.create_audio_stream(self.audio_buffer) # Move this inside call maybe?
-                self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author))
-                self.voiceclient.play(self.audio_buffer)
                 self.softphone.call(self.outbound, sip_uri)
-                await command.channel.send("Calling: " + number + " with caller ID: " + caller_id)
-            except error as e:
-                await command.channel.send("Could not perform call - error:" + str(e))
+                
+                # self.motherfucker(command) # listen and play, the same way casserole did it.
+
+                #loop = asyncio.get_event_loop()
+                #loop.create_task(self.motherfucker())
+
+                # TODO: Enable voiceclient.listen and voiceclient.play when: (info.media_state == pj.MediaState.ACTIVE)
+                import pjsua as pj
+                import time
+                while self.softphone.current_call.info().media_state != pj.MediaState.ACTIVE:
+                    #print("sleep")
+                    time.sleep(0.1)
+                
+                #print("Sleep DONE")
+                self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author))
+                #self.voiceclient.play(self.audio_buffer) # wait with this since listen and play cant be in same block here IIRC...?
+
+                #loop = asyncio.get_event_loop()
+                #loop.create_task(self.motherfucker())
+                self.loop.create_task(self.motherfucker())
+
+                await command.channel.send("Calling: " + number + " with Caller-ID: " + caller_id)
+
+            except Error as e:
+                await command.channel.send(f"Could not perform call - Error: {e}")
+
+
+        # TODO: Add multiple mics:
+        # https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/audioHandling.py#L159
+        
+        # https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/casseroleBot.py#L141
+
 
 
         # Hangup phone call
         if command.content.lower().startswith("!hangup"):
             try:
                 self.softphone.end_call()
+                self.voiceclient.stop_playing()
+                self.voiceclient.stop_listening()
                 self.softphone.destroy_audio_stream() # Move this inside end_call maybe?
-                await command.channel.send("Call with " + number + " ended.")
-            except error as e:
-                await command.channel.send("Could not end call - error:" + str(e))
-            # Stop audio transmission
-            #self.softphone.stop_playing()
-            #self.softphone.stop_listening()
-            #self.voiceclient.stop_playing()
-            #self.voiceclient.stop_listening()
+                await command.channel.send("Call ended.")
+
+            except Error as e:
+                await command.channel.send("Could not end call - Error:" + str(e))
+
 
 
 
