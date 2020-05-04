@@ -3,7 +3,7 @@
 # coding=utf-8
 
 import threading
-import pjsuaxt as pj
+import pjsua as pj
 from .CallHandler import CallHandler
 
 class AccountHandler(pj.AccountCallback):
@@ -11,7 +11,6 @@ class AccountHandler(pj.AccountCallback):
         This function handles everything that prepares for, and accepts call (before CallHandler).
         Account events are handled first, then we establish the call, and handle the call's callbacks with CallHandler.
     """
-
     sem = None
 
     def __init__(self, lib, account=None):
@@ -50,7 +49,7 @@ class AccountHandler(pj.AccountCallback):
         else:
             call_handler = CallHandler(lib=self.lib, call=call)
             call.set_callback(call_handler)
-            call.answer(180) # why 180?
+            call.answer(180) # why 180? https://en.wikipedia.org/wiki/List_of_SIP_response_codes
             print("[AccountHandler]: Answered incoming call from ", call.info().remote_uri)
 
 

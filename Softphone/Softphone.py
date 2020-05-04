@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
+# Functional inspiration: https://github.com/probonopd/OpenPhone/blob/master/openphone.py
 
-# https://github.com/probonopd/OpenPhone/blob/master/openphone.py
-
-import pjsuaxt as pj
-import multiprocessing
+import pjsua as pj
 
 from threading import Thread
 from .CallHandler import CallHandler
@@ -22,10 +20,10 @@ class Softphone:
     def __init__(self, max_calls=2, nameserver=['1.1.1.1'], user_agent='Python Softphone', log_level=1, duration_ms=20, sample_rate=48000, channel_count=2, max_media_ports=8, thread=True):
 
         # User specified Audio settings
-        self.sample_rate       = sample_rate
-        self.samples_per_frame = samples_per_frame
-        self.channel_count     = channel_count
-        self.bits_per_sample   = bits_per_sample
+        #self.sample_rate       = sample_rate
+        #self.samples_per_frame = samples_per_frame
+        #self.channel_count     = channel_count
+        #self.bits_per_sample   = bits_per_sample
 
         # User-agent config
         self.ua_cfg.max_calls = max_calls
@@ -36,8 +34,8 @@ class Softphone:
         self.log_cfg.level = log_level
 
         # Media config
-        self.media_cfg.clock_rate    = sample_rate
-        self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
+        #self.media_cfg.clock_rate    = sample_rate
+        #self.media_cfg.channel_count = channel_count # these settings fucked up the audio stuff.
         #self.media_cfg.snd_clock_rate = ??
         
         #self.media_cfg.audio_frame_ptime = int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
@@ -55,42 +53,40 @@ class Softphone:
         self.player = None
         self.recorder = None
 
-        # Listen / Play threads
-        self.listen_thread = None
-        self.play_thread = None
+        # Stream callback id and slot
+        self.audio_cb_id   = None
+        self.audio_cb_slot = None
 
         # Call variables
         self.call_handler = True
         self.current_call = None
         print("\n")
-        print("[Softphone]:\t Object created.")
+        print("[Softphone.....]: Object created.")
 
 
     def __del__(self):
         self.lib.destroy()
-        print('[Softphone]:\t Object destroyed.')
+        print("[Softphone.....]: Object destroyed.")
 
 
     def register(self, server, port, username, password, default_account=False, proxy=None, protocol='UDP', bind_address='127.0.0.1', bind_port=0):
         """ Register an account at i.e. Asterisk PBX, and set network transport options.
             Returns: Account registered, account callback handler.
         """
-
         if   protocol == 'UDP': protocol = pj.TransportType.UDP
         elif protocol == 'TCP': protocol = pj.TransportType.TCP
         elif protocol == 'TLS': protocol = pj.TransportType.TLS
-        else: print("[Softphone]:\t Error - Invalid protocol type.")
+        else: print("[Softphone.....]: Error - Invalid protocol type.")
 
-
-        print("[Softphone]:\t Creating transport and generating SIP URI.")
+        print("[Softphone.....]: Creating transport and generating SIP URI.")
         transport = self.lib.create_transport(
             protocol,
             pj.TransportConfig(0) # TransportConfig(host=bind_address, port=bind_port) # TODO: Add bind_address and bind_port here.
         )
 
         public_sip_uri = "sip:" + username + "@" + str(transport.info().host + ":" + str(transport.info().port))
-        print("[Softphone]:\t Listening on %s:%d for %s." % (transport.info().host, transport.info().port, public_sip_uri))
-        print("[Softphone]:\t Attempting registration for %s at %s:%s." % (public_sip_uri, server, port) )
+        print("[Softphone.....]: Listening on %s:%d for %s." % (transport.info().host, transport.info().port, public_sip_uri))
+        print("[Softphone.....]: Attempting registration for %s at %s:%s." % (public_sip_uri, server, port) )
 
         account_cfg = pj.AccountConfig(
             domain   = server + ":" + port,
@@ -106,9 +102,9 @@ class Softphone:
         account_handler = AccountHandler(lib=self.lib, account=account)
         account.set_callback(account_handler)
 
-        print("[Softphone]:\t Waiting for registration.")
+        print("[Softphone.....]: Waiting for registration...")
         account_handler.wait()
-        print("[Softphone]:\t Successfully registered %s, status: %s (%s)." % (public_sip_uri, account.info().reg_status, account.info().reg_reason))
+        print("[Softphone.....]: Successfully registered %s, status: %s (%s)." % (public_sip_uri, account.info().reg_status, account.info().reg_reason))
 
         return account
 
@@ -116,10 +112,9 @@ class Softphone:
     def unregister(self, account):
         """ Unregister a registered account.
         """
-
-        print("[Softphone]: Unregistering account:", account)
+        print("[Softphone.....]: Attempting to unregistering account:", account)
         account.delete()
-        print("[Softphone]: Successfully unregistered account.")
+        print("[Softphone.....]: Successfully unregistered account.")
 
 
     def call(self, account, sip_uri):
@@ -127,26 +122,22 @@ class Softphone:
         """
         try:
             if self.current_call:
-                print("[Softphone]:\t Already have a call.")
+                print("[Softphone.....]: Already have a call.")
                 return
 
-            if self.lib.verify_sip_url(sip_uri) != 0: # See documentatoon for verify_sip_url (returns 0 if valid)
-                print("[Softphone]:\t Invalid SIP URI.")
+            if self.lib.verify_sip_url(sip_uri) != 0:
+                print("[Softphone.....]: Invalid SIP URI.")
                 return
 
-            print("[AccountHandler]:\t Attempting new call to %s" % sip_uri)
-            lck = self.lib.auto_lock() # to prevent deadlocks
-            call_handler = CallHandler(lib=self.lib)
+            print("[AccountHandler]: Attempting new call to %s" % sip_uri)
+            lck = self.lib.auto_lock() # To prevent deadlocks
+            call_handler = CallHandler(lib=self.lib, audio_cb_slot=self.audio_cb_slot)
             self.current_call = account.make_call(sip_uri, cb=call_handler)
-            print('[Softphone]:\t Current call is %s.' % self.current_call)
-            del lck # alex does not have this.. hmm.
-
-            #while call.info().media_state != pj.MediaState.ACTIVE: sleep(0.5) # wait for media to become active
-            # conf connect not needed here, CONFIRMED!
-
+            print('[Softphone.....]: Current call is %s.' % self.current_call)
+            del lck
 
         except pj.Error as e:
-            print("[Softphone]:\t Error -", e)
+            print("[Softphone.....]: Error -", e)
             self.current_call = None
             self.lib.destroy()
 
@@ -156,15 +147,15 @@ class Softphone:
         """
         try:
             if not self.current_call:
-                print("[Softphone]:\t There is no call.")
+                print("[Softphone.....]: There is no call.")
                 return
 
             self.current_call.hangup()
             self.current_call = None
-            print("[Softphone]:\t Call ended.")
+            print("[Softphone.....]: Call ended.")
 
         except pj.Error as e:
-            print("[Softphone]:\t Error -", e)
+            print("[Softphone.....]: Error -", e)
 
 
     def get_sound_devices(self):
@@ -193,7 +184,7 @@ class Softphone:
         """ Set NULL sound device / Do not use system audio device.
         """
         self.lib.set_null_snd_dev()
-        print('[Softphone]:\t Using NULL sound device.')
+        print('[Softphone.....]: Using NULL sound device.')
 
 
     def get_capture_device(self):
@@ -208,6 +199,7 @@ class Softphone:
         """
         _, playback_id = self.lib.get_snd_dev()
         self.lib.set_snd_dev(capture_id, playback_id)
+        print("[Softphone.....]: Capture device set to:", capture_id)
 
 
     def get_playback_device(self):
@@ -222,6 +214,7 @@ class Softphone:
         """
         capture_id, _ = self.lib.get_snd_dev()
         self.lib.set_snd_dev(capture_id, playback_id)
+        print("[Softphone.....]: Playback device set to:", playback_id)
 
 
     def capture(self, file_name):
@@ -230,26 +223,25 @@ class Softphone:
         self.recorder = self.lib.create_recorder(file_name)
         recorder_slot = self.lib.recorder_get_slot(self.recorder)
         self.lib.conf_connect(recorder_slot, self.current_call.info().conf_slot) 
-        self.lib.conf_connect(self.current_call.info().conf_slot, recorder_slot) # Call -> wav
-        
-        # Check that buffer size is greater than bytes per frame // ERROR WAS BECAUSE OF MEDIA CONFIG SETTINGS!
-        # Error: python3: ../src/pjmedia/wav_writer.c:201: pjmedia_wav_writer_port_create: Assertion `fport->bufsize >= PJMEDIA_PIA_AVG_FSZ(&fport->base.info)' failed.
+        self.lib.conf_connect(self.current_call.info().conf_slot, recorder_slot)
+        print("[Softphone.....]: Started audio capture.")
+
 
     def stop_capturing(self):
         """ Stop capturing call audio to file
         """
         self.lib.recorder_destroy(self.recorder)
         self.recorder = None
+        print("[Softphone.....]: Stopped audio capture.")
 
 
-    def playback(self, file_name): # FIXME: Make all these generic 'slot' since not only call_slot can be play/rec.
+    def playback(self, file_name):
         """ Playback a WAV file into call.
         """
         self.player = self.lib.create_player(file_name)
         player_slot = self.lib.player_get_slot(self.player)
-        self.lib.conf_connect(player_slot, self.current_call.info().conf_slot) # Wav -> call # WORKS!
-        print("Player slot:", player_slot)
-        print("Playback works with call slot:", self.current_call.info().conf_slot)
+        self.lib.conf_connect(player_slot, self.current_call.info().conf_slot)
+        print("[Softphone.....]: Started audio playback.")
 
 
     def stop_playback(self):
@@ -257,134 +249,17 @@ class Softphone:
         """
         self.lib.player_destroy(self.player)
         self.player = None
-
-    
-    # WORKS!!
-    def _listen_loop(self, sink):
-        """ Listener thread
-        """
-        self.lib.thread_register("ListenThread")
-
-        mem_capture = pj.MemCapture(self.lib,
-            clock_rate=48000,
-            sample_per_frame=960, #spf,
-            channel_count=2,
-            bits_per_sample=16
-        )
-
-        channel_count = 2
-        samples_per_frame = 960
-
-        mem_capture.create()
-        self.lib.conf_connect(self.current_call.info().conf_slot, mem_capture.port_slot)
-
-        while True:
-            if (mem_capture.get_read_available() > samples_per_frame * channel_count):
-                data = mem_capture.get_frame()
-                sink.write(data)
+        print("[Softphone.....]: Stopped audio playback.")
 
 
-
-    def listen(self, sink):
-        """ Listen to the current call.
-            Receive a stream of PCM audio from call (memory).
-            Sink must be an object with a write().
-
-            Writes 20ms?/frame of audio data to the specified sink.
-        """
-        self.listen_thread = Thread(
-            target=self._listen_loop,
-            args  =(sink,)
-        )
-        self.listen_thread.start()
+    def create_audio_stream(self, audio_callback):
+        self.audio_cb_id   = self.lib.create_audio_cb(audio_callback)
+        self.audio_cb_slot = self.lib.audio_cb_get_slot(self.audio_cb_id)
+        print("[Softphone.....]: Created audio callback.")
 
 
-
-
-    def stop_listening(self):
-        self.listen_thread.join()
-        raise NotImplementedError
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ### BELOW DOES NOT WORK 100% YET! 
-
-    def _play_loop(self, source):
-        """ Internal method used for threading
-        """
-        self.lib.thread_register("PlayThreadddd")
-        # Otherwise getting # python: ../src/pj/os_core_unix.c:692: pj_thread_this: Assertion `!"Calling pjlib from unknown/external thread. 
-        # You must " "register external threads with pj_thread_register() " "before calling any pjlib functions."' failed.
-
-
-        print("------")
-        print('clock_rate:', self.media_cfg.clock_rate)
-        asd = int((20/1000.0) / (1.0/self.media_cfg.clock_rate))
-        print('Samples per frame', asd)
-
-        spf = int((20/1000.0) / (1.0/48000)) #self.media_cfg.clock_rate))
-        print("samples_per_frame:", spf)
-
-        #spf = int(spf/2) # dirty hack? :p -> Input frame size: 3840 does not equal mem player frame size: 3840 ???
-
-        # samples_per_frame: 960
-        # bits_per_sample  : 16
-        # p_mem_player_var->samples_per_frame * (p_mem_player_var->bits_per_sample / 2)) 
-        #                                 960 * (16 / 2) # /2 is channel_count. TODO: Fix in C... 
-
-        spf = int(spf*4) # dirty hack? :p
-
-        mem_player = pj.MemPlayer(self.lib,
-            clock_rate=48000, # 48000, #self.media_cfg.clock_rate, # clock_rate = sample_rate
-            sample_per_frame=spf,
-            channel_count=2,
-            bits_per_sample=16 # Stereo, 16-bit
-        )
-
-        channel_count = 2
-        samples_per_frame = spf
-
-        mem_player.create()
-        self.lib.conf_connect(mem_player.port_slot, self.current_call.info().conf_slot)
-
-        while True: # Problem is that this C thing reads faster than Python...
-            if (mem_player.get_write_available() > samples_per_frame*channel_count): # Can we write?
-                data = source.read() # Make this wait until there is data in buffer... # Do we have data to write? Check buffer!
-                
-                if data == False:
-                    continue
-                
-                #print("Bytes to put_frame:", len(data))
-                total_bytes_played = mem_player.put_frame(data)
-
-
-
-    def play(self, source):
-        """ Play audio from source into call.
-            Transmit a stream of PCM audio to call (memory).
-            Stream must be an object with a read().
-
-            Play 20ms?/frame of audio data from the specified source.
-        """
-        # Create a player thread
-        self.play_thread = Thread(
-            name="PlayThread",
-            target=self._play_loop,
-            args=(source,)
-        )
-        self.play_thread.start() # Run it..
-
-    
-
-    def stop_playing(self):
-        self.play_thread.join() # TODO: Fix possible fuckup here?
+    def destroy_audio_stream(self):
+        self.lib.audio_cb_destroy(self.audio_cb_id)
+        self.audio_cb_id = None
+        self.audio_cb_slot = None
+        print("[Softphone.....]: Destroyed audio callback.")
