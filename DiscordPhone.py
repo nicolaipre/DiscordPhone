@@ -111,7 +111,8 @@ class DiscordPhone(discord.Client):
 
             try:
                 self.softphone.create_audio_stream(self.audio_buffer) # Move this inside call maybe?
-                self.voiceclient.listen(discord.UserFilter())
+                self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author))
+                self.voiceclient.play(self.audio_buffer)
                 self.softphone.call(self.outbound, sip_uri)
                 await command.channel.send("Calling: " + number + " with caller ID: " + caller_id)
             except error as e:
