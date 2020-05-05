@@ -27,23 +27,22 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
         self.samples_per_frame = int( (duration_ms/1000.0) / self.sample_period_sec )
 
         self.phone_audio   = deque()
-        self.discord_audio = deque() 
-        
-        # Multi user mic hack:
-        self.audio_bytes = bytearray()
+        self.discord_audio = deque()
 
-        self.curSpeakerID = None
-        self.speakerIDList = []
+        # For multi-user voice
+        self.speakers = []
+        self.tmp_audio_bytes = []
 
 
 
-    
+
+
     ### phone -> discord ###
 
     def cb_put_frame(self, frame): # Denne er good! Testet med loopback i telefon
-        """Listen to the audio coming from phone, and write to phone_audio buffer.
-            
-           Phone: Write method
+        """ Listen to the audio coming from phone, and write to phone_audio buffer.
+
+            Phone: Write method
         """
         # An audio frame arrived, it is a string (i.e. ByteArray)
         self.phone_audio.append(frame)
@@ -55,11 +54,11 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
     # Denne er fucka...
     def read(self):
-        """Read from discord_audio buffer, and send audio to phone.
-        
-        - Get an audio frame to be played into phone speaker.
+        """ Read from discord_audio buffer, and send audio to phone.
 
-           Discord: Read method
+            Get an audio frame to be played into phone speaker.
+
+            Discord: Read method
         """
         #print("jalla_enter")
         if len(self.phone_audio): # funker når vi relayer discord...
@@ -67,7 +66,7 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
             #print("jalla_frame")
             return bytes(frame)
         else:
-            print("empty frame of null bytes RETURNED") # play stopper når det er tomt for frames. 
+            print("empty frame of null bytes RETURNED") # play stopper når det er tomt for frames.
             return b'\x00' * self.samples_per_frame  # Return an empty frame of null bytes
 
 
@@ -79,43 +78,59 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
     ### discord -> phone ### (denne er good = de to under er good...)
 
-
     def write(self, voiceData): # Make this return 20 ms of data and be 640 bytes
-        """Listen to the audio coming from Discord, and write to discord_audio buffer.
+        """ Listen to the audio coming from Discord, and write to discord_audio buffer.
+
+            Discord: Write method
         """
-        self.discord_audio.append(voiceData.data) # raw bytes from VoiceData object.
-        #print("WRITE bytes from discord:", len(data.data), "| Buffer size:", len(self.discord_audio))
 
+        print(f"{voiceData.user}\t- FrameBytes: {[n for n in voiceData.data[:30]]}")
+        #self.discord_audio.append(voiceData.data) # appends a frame of voice data
 
-        # TODO: Add multiple mics:
-        # https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/audioHandling.py#L159
+        speaker_id = voiceData.user.id
 
-        """
-        # Attempt to let everyone speak:
-        if (voiceData.user is not None):
-            speakerID = voiceData.user.id
-            self.curSpeakerID = speakerID # used to update bot text
-         
-            if (speakerID in self.speakerIDList):
-                frame            = self.audio_bytes[:self.samples_per_frame] # Get enough samples to fill a frame
-                self.audio_bytes = self.audio_bytes[self.samples_per_frame:] # Pop
-                self.discord_audio.append(frame)
-                self.speakerIDList = []
+        if speaker_id in self.speakers:
+            # amount of speakers is len(self.speakers)
+            speakerAmount = len(self.tmp_audio_bytes)
+            frame = [0] * 3840
             
-            self.audio_bytes += voiceData.data
-            self.speakerIDList.append(speakerID)
-        """
+            for speaker_cnt, data in enumerate(self.tmp_audio_bytes):
+                for i in range(speaker_cnt, len(data)-speakerAmount, speakerAmount):
+                    frame[i] = data[i]
 
-        
+            print(f"       Prev. FrameBytes: {frame[:30]}")
+            print("---------------")
+            self.discord_audio.append(bytes(frame)) # Must be 3840 bytes
+
+            self.speakers = []
+            self.tmp_audio_bytes = []
+
+        #if voiceData.data != b"\x00"*3840:
+        self.tmp_audio_bytes.append(voiceData.data)
+        self.speakers.append(speaker_id)
+
+
+        #for i in range(len(voiceData.data)-self.speakers):
+        #    if i % self.speakers:
+        #        self.audio_bytes[i+self.speaker_cnt] = voiceData.data[i+self.speaker_cnt]
+
+        # N = 2
+        # kfbi: 0 1 2 3 4 5 6 7 (voicedata.data)
+        # nico: 7 6 5 4 3 2 1 0 (voicedata.data)
+        # merge: 0, 6, 2, 4
+
+
+
+
 
 
 
     def cb_get_frame(self, size): # Denne er good! Testet med loopback i telefon
-        """Read from discord_audio buffer, and send audio to phone.
-        
-        - Get an audio frame to be played into phone speaker.
+        """ Read from discord_audio buffer, and send audio to phone.
 
-        1 frame = 640 bytes of audio
+            Get an audio frame to be played into phone speaker.
+
+            Phone: Read method
         """
         if len(self.discord_audio):
             frame = self.discord_audio.popleft()

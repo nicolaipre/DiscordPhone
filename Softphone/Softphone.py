@@ -163,6 +163,12 @@ class Softphone:
             print("[Softphone.....]: Error -", e)
 
 
+    def wait_for_active_audio(self):
+        """ Wait until call audio is activated.
+        """
+        while self.current_call.info().media_state != pj.MediaState.ACTIVE:
+            time.sleep(0.5)
+
 
     def get_sound_devices(self):
         """ Get a detailed list of available sound devices.

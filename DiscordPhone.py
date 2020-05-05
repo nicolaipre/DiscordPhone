@@ -39,6 +39,10 @@ class DiscordPhone(discord.Client):
         self.voiceclient = None
         self.audio_buffer = AudioCB()
 
+        # Run subroutines
+        #self.speakingUserString = "..."
+        #self.loop.create_task(self.subroutines())
+
 
     def __del__(self):
         self.softphone.unregister(self.outbound)
@@ -63,58 +67,28 @@ class DiscordPhone(discord.Client):
         )
         print("[DiscordPhone..]: I am now ready.")
 
+    
+    async def subroutines(self):
+        if self.voiceclient:
+            member = self.voiceclient.get_member(self.audioSink.curSpeakerID)
+            if (member is not None):
+                if member.nick is not None:
+                    self.speakingUserString = str(member.nick)
+                else:
+                    self.speakingUserString = str(member)
+
+            self.bot.change_presence(discord.Game(name=f"Talking: {self.speakingUserString}"))
+    
 
 
-    async def set_caller_id(self, caller_id):
-        pass
-        # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # conn = sock.connect(('127.0.0.1', '5038'))
-        #        sock.send("""
-        # action:updateconfig
-        # 
-        # """)
-        #        sock.send("\r\n")
-        # data = sock.recv()
-        # sock.close()
-        # netcat connection to 5038, username + password -> action:updateconfig
-        # https://gist.github.com/jfinstrom/4227521
-        # https://pypi.org/project/asterisk-ami/
-        # https://www.voip-info.org/asterisk-manager-api-action-updateconfig/
-        # https://stackoverflow.com/questions/32781655/asterisk-ami-deleting-of-certain-extension
-        # https://stackoverflow.com/questions/47938769/updateconfig-asterisk-extensions-conf
-        """
-        Action: updateconfig
-        Reload: yes
-        Srcfilename: extensions.conf
-        Dstfilename: extensions.conf
-        Action-000000: delete
-        Cat-000000: test
-        Var-000000: exten
-        Match-000000: Bob
-
-
-        action:updateconfig
-        srcfilename:extensions.conf
-        dstfilename:extensions.conf
-        Action-000000: update
-        Cat-000000: stdexten
-        Var-000000: exten
-        Match-000000: _X.,50005,Dial(${dev},20)
-        Value-000000:>_X.,50005,Dial(${dev},30)
-        """
-
-
-
-    async def motherfucker(self):
-        print("Enter mf")
-        #self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author))
+    async def play_thread(self):
+        #print("Enter mf")
         self.voiceclient.play(self.audio_buffer)
-        print("Leave mf")
+        #print("Leave mf")
 
 
 
-
-    # Handle commands
+    # Handle commands TODO: replace with decorator command handling..?
     async def on_message(self, command):
 
         # Do not listen to self (bot repeats commands)
@@ -143,7 +117,7 @@ class DiscordPhone(discord.Client):
         # Leave voice channel
         if command.content.lower().startswith("!leave"):
             if self.voiceclient:
-                await command.channel.send("Leaving voice channel: " + command.author.voice.channel.name)
+                await command.channel.send(f"Leaving voice channel: {command.author.voice.channel.name}")
                 await self.voiceclient.disconnect()
             else:
                 await command.channel.send("Sorry, I am not in a voice channel...")
@@ -162,7 +136,7 @@ class DiscordPhone(discord.Client):
             if command.author.voice is None:
                 await command.channel.send("Sorry, you are not in a voice channel.")
             else:
-                await command.channel.send("Joining voice channel: " + command.author.voice.channel.name)
+                await command.channel.send(f"Joining voice channel: {command.author.voice.channel.name}")
                 self.voiceclient = await command.author.voice.channel.connect()
                 #self.voiceclient.play("elevator-waiting-music.wav")
 
@@ -170,10 +144,6 @@ class DiscordPhone(discord.Client):
         # Call phone
         if command.content.lower().startswith("!call"): # call, number, spoof
             cmd = command.content.lower().split(" ") # ["!call", "97526703", "13371337"] # replace number in /etc/asterisk/extensions.conf, ssh?
-            # https://community.asterisk.org/t/persuade-asterisk-to-reload-config-files-from-python/20056
-
-            # 1. sed replace /etc/asterisk/extensions.conf
-            # service asterisk reload
 
             if len(cmd) != 3:
                 await command.channel.send("Correct usage: !call <number to call (with 00 for country code)> <caller id>")
@@ -187,33 +157,20 @@ class DiscordPhone(discord.Client):
             try:
                 self.softphone.create_audio_stream(self.audio_buffer) # Move this inside call maybe?
                 self.softphone.call(self.outbound, sip_uri)
-                
-                
-                import pjsua as pj
-                while self.softphone.current_call.info().media_state != pj.MediaState.ACTIVE: # Move to softphone or call handler 
-                    time.sleep(0.1)
-                
+                self.softphone.wait_for_active_audio() # Wait for active audio before we listen...
+                #self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author)) # Single speaker
+                self.voiceclient.listen(self.audio_buffer) # Multiple speakers
 
 
-                self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author))
-                #self.voiceclient.play(self.audio_buffer) # wait with this since listen and play cant be in same block here IIRC...?
-
-
-                # TODO: Why does this have to be in its own loop? 
+                # TODO: Why does play() have to be in its own loop? Is it not threaded??? It is blocking???
                 # This does not need them in own loop - https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/casseroleBot.py#L141
-                #loop = asyncio.get_event_loop()
-                #loop.create_task(self.motherfucker())
-                self.loop.create_task(self.motherfucker())  # einar aka PythonGawd NeverForGet # <-- neger 
+                loop = asyncio.get_event_loop()
+                loop.create_task(self.play_thread())# einar aka PythonGawd NeverForGet (hack the loop)
 
-                await command.channel.send("Calling: " + number + " with Caller-ID: " + caller_id)
+                await command.channel.send(f"Calling: `{number}` with Caller-ID: `{caller_id}`")
 
-            except Error as e:
+            except Exception as e:
                 await command.channel.send(f"Could not perform call - Error: {e}")
-
-
-        # TODO: Add multiple mics:
-        # https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/audioHandling.py#L159
-        
 
 
 
@@ -226,9 +183,24 @@ class DiscordPhone(discord.Client):
                 self.softphone.destroy_audio_stream() # Move this inside end_call maybe?
                 await command.channel.send("Call ended.")
 
-            except Error as e:
-                await command.channel.send("Could not end call - Error:" + str(e))
+            except Exception as e:
+                await command.channel.send(f"Could not end call - Error: {e}")
 
+        """
+        # Unmute mic
+        if command.content.lower().startswith("!unmute"):
+            self.AudioCB.speakerIDList.append(command.message.author.id)
+            await command.channel.send(f"Adding user {command.message.author.name} to call.")
+
+
+        # Mute mic
+        if command.content.lower().startswith("!mute"):
+            self.AudioCB.speakerIDList.remove(command.message.author.id)
+            await command.channel.send(f"Removing user {command.message.author.name} from call.")
+        """
+
+        if command.content.lower().startswith("!a"):
+            self.bot.change_presence(discord.Game(name=f"Talking: halla"))
 
 
 
