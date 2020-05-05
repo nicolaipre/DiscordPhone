@@ -28,9 +28,14 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
         self.phone_audio   = deque()
         self.discord_audio = deque() 
+        
+        # Multi user mic hack:
+        self.audio_bytes = bytearray()
 
         self.curSpeakerID = None
         self.speakerIDList = []
+
+
 
     
     ### phone -> discord ###
@@ -81,27 +86,27 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
         self.discord_audio.append(voiceData.data) # raw bytes from VoiceData object.
         #print("WRITE bytes from discord:", len(data.data), "| Buffer size:", len(self.discord_audio))
 
-        # Attempt to let everyone speak:
+
+        # TODO: Add multiple mics:
+        # https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/audioHandling.py#L159
+
         """
-        if(voiceData.user is not None):
+        # Attempt to let everyone speak:
+        if (voiceData.user is not None):
             speakerID = voiceData.user.id
-            self.curSpeakerID = speakerID
-
-            voiceDataNp = np.ndarray(shape=(self.samples_per_frame, 2), dtype='<i2', buffer=voiceData.data)
-
+            self.curSpeakerID = speakerID # used to update bot text
+         
             if (speakerID in self.speakerIDList):
-                #self.audioStream.write(self.audio_bytes)
-                self.audio_bytes.fill(0)
+                frame            = self.audio_bytes[:self.samples_per_frame] # Get enough samples to fill a frame
+                self.audio_bytes = self.audio_bytes[self.samples_per_frame:] # Pop
+                self.discord_audio.append(frame)
                 self.speakerIDList = []
-                self.mixedPacketCount += 1
             
-            self.audio_bytes += voiceDataNp
+            self.audio_bytes += voiceData.data
             self.speakerIDList.append(speakerID)
         """
 
-
-
-
+        
 
 
 

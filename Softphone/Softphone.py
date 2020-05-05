@@ -35,9 +35,8 @@ class Softphone:
         self.media_cfg.clock_rate    = sample_rate
         self.media_cfg.channel_count = channel_count 
 
-
-        #self.media_cfg.snd_clock_rate = # Clock rate to be applied when opening the sound device. If value is zero, conference bridge clock rate will be used.
-        self.media_cfg.audio_frame_ptime = duration_ms # int(1000 * self.cfg['Audio']['samples_per_frame'] / self.cfg['Audio']['sample_rate'])
+        #self.media_cfg.snd_clock_rate = sample_rate# Clock rate to be applied when opening the sound device. If value is zero, conference bridge clock rate will be used.
+        self.media_cfg.audio_frame_ptime = duration_ms # Discord uses frames containing 20 ms audio data
         #self.media_cfg.no_vad = True # voice activation detection enabled
         #self.media_cfg.enable_ice = False
         self.media_cfg.max_media_ports = max_media_ports
