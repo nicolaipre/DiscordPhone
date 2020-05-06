@@ -2,4 +2,3 @@
 
 An attempt at creating a simple softphone using the PJSIP library.
 
-**Current status:** Need to fix streaming.

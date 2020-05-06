@@ -1,0 +1,20 @@
+[DISCORD]
+token    = bot_token
+
+[SIP]
+realm    = asterisk
+server   = 1.1.1.1
+port     = 9999
+username = 200
+secret   = passw0rd
+uri      =
+proxy    =
+
+[ASTERISK-SIP-Inbound]
+realm    = asterisk
+server   = 1.1.1.1
+port     = 9999
+username = 201
+secret   = passw0rd
+uri      =
+proxy    =

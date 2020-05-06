@@ -20,6 +20,8 @@ from threading import Thread
 
 from Softphone.Softphone import Softphone
 from Audio import AudioCB # Must be below softphone import if not pjmedia max ports error????
+from Asterisk import Asterisk
+
 
 # Fix Discord Opus error
 discord.opus.load_opus(ctypes.util.find_library('opus'))
@@ -152,6 +154,14 @@ class DiscordPhone(discord.Client):
             number = cmd[1]
             caller_id = cmd[2]
             sip_uri = 'sip:%s@%s:%s' % (number, self.config['server'], self.config['port'])
+
+            try:
+                a = Asterisk(host='127.0.0.1', port=5038, username='admin', password='admin')
+                a.set_caller_id(caller_id)
+                
+            except Exception as e:
+                await command.channel.send(f"Could not set caller ID - Error: {e}")
+
 
 
             try:

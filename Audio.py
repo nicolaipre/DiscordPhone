@@ -84,7 +84,7 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
             Discord: Write method
         """
 
-        print(f"{voiceData.user}\t- FrameBytes: {[n for n in voiceData.data[:30]]}")
+        #print(f"{voiceData.user}\t- FrameBytes: {[n for n in voiceData.data[:30]]}")
         #self.discord_audio.append(voiceData.data) # appends a frame of voice data
 
         speaker_id = voiceData.user.id
@@ -98,8 +98,8 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
                 for i in range(speaker_cnt, len(data)-speakerAmount, speakerAmount):
                     frame[i] = data[i]
 
-            print(f"       Prev. FrameBytes: {frame[:30]}")
-            print("---------------")
+            #print(f"       Prev. FrameBytes: {frame[:30]}")
+            #print("---------------")
             self.discord_audio.append(bytes(frame)) # Must be 3840 bytes
 
             self.speakers = []
@@ -108,21 +108,6 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
         #if voiceData.data != b"\x00"*3840:
         self.tmp_audio_bytes.append(voiceData.data)
         self.speakers.append(speaker_id)
-
-
-        #for i in range(len(voiceData.data)-self.speakers):
-        #    if i % self.speakers:
-        #        self.audio_bytes[i+self.speaker_cnt] = voiceData.data[i+self.speaker_cnt]
-
-        # N = 2
-        # kfbi: 0 1 2 3 4 5 6 7 (voicedata.data)
-        # nico: 7 6 5 4 3 2 1 0 (voicedata.data)
-        # merge: 0, 6, 2, 4
-
-
-
-
-
 
 
     def cb_get_frame(self, size): # Denne er good! Testet med loopback i telefon
