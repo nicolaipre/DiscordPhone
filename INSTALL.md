@@ -13,14 +13,11 @@ make dep
 make
 sudo make install
 cd pjsip-apps/src/python
-python3 setup-pjsuaxt.py build
+python3 setup.py build
 sudo python3 setup.py install
 ```
 
 ## Install `discord.py` (fork by: imayhaveborkedit)
 ```sh
-wget https://github.com/imayhaveborkedit/discord.py/archive/voice-recv-mk2.zip
-unzip voice-recv-mk2.zip
-cd voice-recv-mk2
-python3 setup.py install
+python3 -m pip install https://github.com/imayhaveborkedit/discord.py/archive/voice-recv-mk2.zip
 ```
