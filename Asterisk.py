@@ -28,7 +28,7 @@ class Asterisk:
         """ Login to Asterisk CLI
         """
         login = f"Action: Login\nActionID: 1\nUsername: {self.username}\nSecret: {self.password}\n\n"
-        self.conn.send(login.decode())
+        self.conn.send(login.encode())
         resp = self._recv_response()
         self._recv_response()
         self._recv_response()
