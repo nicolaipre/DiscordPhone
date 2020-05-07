@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
-# Functional inspiration: https://github.com/probonopd/OpenPhone/blob/master/openphone.py
+# Functional inspiration: 
+# - https://github.com/probonopd/OpenPhone/blob/master/openphone.py
+# - https://github.com/NottingHack/PBX/blob/master/Payphone/PayPhone.py
 
 import pjsua as pj
 import time
