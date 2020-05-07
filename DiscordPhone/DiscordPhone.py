@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
 # Built with pjproject: https://github.com/nicolaipre/pjproject
-# It is important to use this ^ fork! 
-
-
-# https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/casseroleBot.py
+# It is important to use this ^ fork!
 
 import os
 import sys
@@ -14,13 +11,10 @@ import asyncio
 import ctypes
 import socket
 import ctypes.util
-import configparser
 
-from threading import Thread
-
-from Softphone.Softphone import Softphone
-from Audio import AudioCB # Must be below softphone import if not pjmedia max ports error????
-from Asterisk import Asterisk
+from .Softphone.Softphone import Softphone
+from .Audio import AudioCB # Must be below softphone import if not pjmedia max ports error????
+from .Asterisk import Asterisk
 
 
 # Fix Discord Opus error
@@ -212,18 +206,4 @@ class DiscordPhone(discord.Client):
         if command.content.lower().startswith("!a"):
             self.bot.change_presence(discord.Game(name=f"Talking: halla"))
 
-
-
-# TODO: Replace with proper parser
-def read_config(file_name):
-    #if os.path != file_name: sys.exit("No config file found!")
-    cfg = configparser.RawConfigParser()
-    cfg.read(file_name)
-    return dict(cfg)
-
-
-config = read_config('dp.conf')
-token  = config['DISCORD']['token']
-client = DiscordPhone(config['SIP'])
-client.run(token)
 
