@@ -4,7 +4,7 @@
 - The SIP Trunk provider must allow custom caller ID for spoofing to work.
 
 ## Install pjsua (patch by: malarinv)
-```sh
+```sh=
 sudo apt install python3 python3-dev build-essential libasound2-dev
 wget https://github.com/nicolaipre/pjproject/archive/py37.zip
 unzip py37.zip
@@ -20,7 +20,9 @@ sudo python3 setup.py install
 ```
 
 ## Install `discord.py` (fork by: imayhaveborkedit)
-`python3 -m pip install https://github.com/imayhaveborkedit/discord.py/archive/voice-recv-mk2.zip`
+```sh=
+python3 -m pip install https://github.com/imayhaveborkedit/discord.py/archive/voice-recv-mk2.zip
+```
 
 ## Edit Asterisk configuration files
 Adjust the following config files to your liking:

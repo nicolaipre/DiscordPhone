@@ -9,4 +9,6 @@ The project depends on:
 For installation instructions, see [**assets/INSTALL.md**](https://github.com/nicolaipre/DiscordPhone/blob/master/INSTALL.md).
 
 ## Usage
-`python3 run.py -c dp.conf`
+```sh=
+python3 run.py -c dp.conf
+```
