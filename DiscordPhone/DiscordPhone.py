@@ -162,6 +162,7 @@ class DiscordPhone(discord.Client):
 
             except Exception as e:
                 await command.channel.send(f"Could not set caller ID - Error: {e}")
+                return
 
 
 
@@ -182,6 +183,7 @@ class DiscordPhone(discord.Client):
 
             except Exception as e:
                 await command.channel.send(f"Could not perform call - Error: {e}")
+                return
 
 
 
