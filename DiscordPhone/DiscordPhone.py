@@ -63,7 +63,7 @@ class DiscordPhone(discord.Client):
         )
         print("[DiscordPhone..]: I am now ready.")
 
-    
+
     async def subroutines(self):
         if self.voiceclient:
             member = self.voiceclient.get_member(self.audioSink.curSpeakerID)
@@ -74,7 +74,6 @@ class DiscordPhone(discord.Client):
                     self.speakingUserString = str(member)
 
             self.bot.change_presence(discord.Game(name=f"Talking: {self.speakingUserString}"))
-    
 
 
     async def play_thread(self):
@@ -142,17 +141,25 @@ class DiscordPhone(discord.Client):
             cmd = command.content.lower().split(" ") # ["!call", "97526703", "13371337"] # replace number in /etc/asterisk/extensions.conf, ssh?
 
             if len(cmd) != 3:
-                await command.channel.send("Correct usage: !call <number to call (with 00 for country code)> <caller id>")
+                await command.channel.send("Correct usage: `!call <number to call (with country code)> <Caller ID>`")
+                await command.channel.send("Example usage: `!call +4712345678 +4713371337`")
                 return
 
             number = cmd[1]
             caller_id = cmd[2]
-            sip_uri = 'sip:%s@%s:%s' % (number, self.config['server'], self.config['port'])
+
+            # TODO: Fix this ghetto approach of replacing and stripping
+            number_new    = number.replace("+", "00")
+            caller_id_new = caller_id[1:] # Strip starting +
+            print(caller_id_new)
+
+            #sip_uri = 'sip:%s@%s:%s' % (number, self.config['server'], self.config['port'])
+            sip_uri = f"sip:{number_new}@{self.config['server']}:{self.config['port']}"
 
             try:
                 a = Asterisk(host='127.0.0.1', port=5038, username='admin', password='admin')
-                a.set_caller_id(caller_id)
-                
+                a.set_caller_id(caller_id_new)
+
             except Exception as e:
                 await command.channel.send(f"Could not set caller ID - Error: {e}")
 
@@ -204,6 +211,6 @@ class DiscordPhone(discord.Client):
         """
 
         if command.content.lower().startswith("!a"):
-            self.bot.change_presence(discord.Game(name=f"Talking: halla"))
+            self.client.change_presence(discord.Game(name=f"Talking: halla"))
 
 
