@@ -26,10 +26,10 @@ python3 -m pip install https://github.com/imayhaveborkedit/discord.py/archive/vo
 
 ## Edit Asterisk configuration files
 Adjust the following config files to your liking. See `assets/asterisk/*.conf` for examples.
-- **/etc/asterisk/sip.conf**
-- **/etc/asterisk/extensions.conf**
-- **/etc/asterisk/manager.conf**
-- **/etc/asterisk/manager.d/admin.conf**
+- /etc/asterisk/sip.conf
+- /etc/asterisk/extensions.conf
+- /etc/asterisk/manager.conf
+- /etc/asterisk/manager.d/admin.conf
 
 ## Restart or reload Asterisk
 This must be done after configuration files have been updated.
