@@ -24,6 +24,11 @@ sudo python3 setup.py install
 python3 -m pip install https://github.com/imayhaveborkedit/discord.py/archive/voice-recv-mk2.zip
 ```
 
+## Install Asterisk
+```bash
+sudo apt install asterisk -y
+```
+
 ## Edit Asterisk configuration files
 Adjust the following config files to your liking. See `assets/asterisk/*.conf` for examples.
 - /etc/asterisk/sip.conf
