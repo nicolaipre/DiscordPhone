@@ -2,3 +2,4 @@ __pycache__
 .vscode
 .vscode/
 dp.conf
+run.log
