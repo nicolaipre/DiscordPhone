@@ -1,5 +1,5 @@
 # Installation instructions for DiscordPhone
-- Follow the instructions below to successfully set up your instance of DiscordPhone.
+Follow the instructions below to successfully set up your instance of DiscordPhone.
 - You will also need a SIP Trunk provider for the SIP configuration.
 - The SIP Trunk provider must allow custom caller ID for spoofing to work.
 
@@ -19,7 +19,7 @@ python3 setup.py build
 sudo python3 setup.py install
 ```
 
-## Install `discord.py` (fork by: imayhaveborkedit)
+## Install discord.py (fork by: imayhaveborkedit)
 ```sh=
 python3 -m pip install https://github.com/imayhaveborkedit/discord.py/archive/voice-recv-mk2.zip
 ```
