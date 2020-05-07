@@ -3,7 +3,7 @@ import socket
 class Asterisk:
     def __init__(self, host='127.0.0.1', port=5038, username='admin', password='admin'):
         self.host = host
-        self.port = port
+        self.port = int(port)
         self.username = username
         self.password = password
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

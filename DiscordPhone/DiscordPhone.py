@@ -22,28 +22,44 @@ discord.opus.load_opus(ctypes.util.find_library('opus'))
 discord.opus.is_loaded()
 
 class DiscordPhone(discord.Client):
-    def __init__(self, sip_config):
+    def __init__(self, config):
         super().__init__()
 
+        # Asterisk
+        self.asterisk_config = config['ASTERISK']
+
         # SIP
-        self.config = sip_config
+        self.inbound_config  = config['SIP-Inbound']
+        self.outbound_config = config['SIP-Outbound']
         self.inbound = None
         self.outbound = None
 
         # Audio
         self.softphone = None
         self.voiceclient = None
-        self.audio_buffer = None
+        self.audio_buffer = AudioCB()
 
-        # Run subroutines
-        #self.speakingUserString = "..."
-        #self.loop.create_task(self.subroutines())
+        # Blacklisted spoofs # TODO: Make blacklist.json
+        self.blacklist = [
+            '02800',    # Politiet
+            '110',      # Brannvesen
+            '112',      # Politiet
+            '113',      # Ambulanse
+            '120',      # Nødnummer til sjøs
+            '1412',     # Teksttelefon for døve og hørselshemmede
+            '116117',   # Europeisk nummer for legevakt
+            '911',      # 911
+        ]
 
 
     def __del__(self):
-        self.softphone.unregister(self.outbound)
-        #self.outbound.delete()
-        print("[DiscordPhone..]: Object destroyed.")
+        try:
+            #self.softphone.unregister(self.inbound)
+            self.softphone.unregister(self.outbound)
+        except Exception as e:
+            print("[DiscordPhone..]: Attempted unregistration, but account was never registered.")
+        finally:
+            print("[DiscordPhone..]: Object destroyed.")
 
 
     async def on_ready(self):
@@ -56,29 +72,21 @@ class DiscordPhone(discord.Client):
         print("[DiscordPhone..]: Attempting SIP registration...")
         #self.inbound=self.softphone.register(...) # TODO: Registration of account for incoming calls
         self.outbound=self.softphone.register(
-            server  =self.config['server'],
-            port    =self.config['port'],
-            username=self.config['username'],
-            password=self.config['secret']
+            server  =self.outbound_config['server'],
+            port    =self.outbound_config['port'],
+            username=self.outbound_config['username'],
+            password=self.outbound_config['secret']
         )
         print("[DiscordPhone..]: I am now ready.")
 
-
-    async def subroutines(self):
-        if self.voiceclient:
-            member = self.voiceclient.get_member(self.audioSink.curSpeakerID)
-            if (member is not None):
-                if member.nick is not None:
-                    self.speakingUserString = str(member.nick)
-                else:
-                    self.speakingUserString = str(member)
-
-            self.bot.change_presence(discord.Game(name=f"Talking: {self.speakingUserString}"))
-
+    # TODO: Make matching better, and store all numbers in blacklist.json
+    def blacklist_check(self, number):
+        if number in self.blacklist:
+            return True
+        return False
 
     async def play_thread(self):
         self.voiceclient.play(self.audio_buffer)
-
 
 
     # Handle commands TODO: replace with decorator command handling..?
@@ -103,6 +111,8 @@ class DiscordPhone(discord.Client):
         if command.content.lower().startswith("!quit"):
             if self.voiceclient:
                 await self.voiceclient.disconnect()
+            
+            self.softphone = None # To trigger __del__ softphone for graceful exit
             await command.channel.send("Goodbye..!")
             await self.logout()
 
@@ -143,18 +153,26 @@ class DiscordPhone(discord.Client):
                 await command.channel.send("Example usage: `!call +4712345678 +4713371337`")
                 return
 
+            # TODO: Fix this ghetto shit below
             number = cmd[1]
             caller_id = cmd[2]
-
-            # TODO: Fix this ghetto approach of replacing and stripping
-            number_new    = number.replace("+", "00")
+            number_new = number.replace("+", "00")
             caller_id_new = caller_id[1:] # Strip starting +
 
+            if self.blacklist_check(number):
+                await command.channel.send(f"This caller ID is blacklisted..!")
+                return
+
             # Format SIP URI
-            sip_uri = f"sip:{number_new}@{self.config['server']}:{self.config['port']}"
+            sip_uri = f"sip:{number_new}@{self.outbound_config['server']}:{self.outbound_config['port']}"
 
             try:
-                a = Asterisk(host='127.0.0.1', port=5038, username='admin', password='admin')
+                a = Asterisk(
+                    host    =self.asterisk_config['host'],
+                    port    =self.asterisk_config['port'],
+                    username=self.asterisk_config['username'],
+                    password=self.asterisk_config['secret']
+                )
                 a.set_caller_id(caller_id_new)
 
             except Exception as e:
@@ -164,7 +182,7 @@ class DiscordPhone(discord.Client):
 
 
             try:
-                self.audio_buffer = AudioCB() # Prepare the buffer
+                #self.audio_buffer = AudioCB() # Prepare the buffer
                 self.softphone.create_audio_stream(self.audio_buffer) # Move this inside call maybe?
                 self.softphone.call(self.outbound, sip_uri)
                 self.softphone.wait_for_active_audio() # Wait for active audio before we listen...
@@ -199,7 +217,7 @@ class DiscordPhone(discord.Client):
                 self.voiceclient.stop_playing()
                 self.voiceclient.stop_listening()
                 self.softphone.destroy_audio_stream() # Move this inside end_call maybe?
-                self.audio_buffer = None
+                #self.audio_buffer = None
                 await command.channel.send("Call ended.")
                 await self.change_presence(status=discord.Status.idle, activity=discord.Game(name="Idle... 💤"))
 

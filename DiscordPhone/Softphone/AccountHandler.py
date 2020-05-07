@@ -42,14 +42,13 @@ class AccountHandler(pj.AccountCallback):
         print("[AccountHandler]: Call recieved: %s" % call)
         remote_uri = call.info().remote_uri
 
-        if self.current_call or (remote_uri in "blacklist"):
+        if self.current_call: # or (remote_uri in "blacklist"):
             call.answer(486, "Busy")
-            return # is this return needed?
+            return
 
         else:
             call_handler = CallHandler(lib=self.lib, call=call)
             call.set_callback(call_handler)
-            call.answer(180) # why 180? https://en.wikipedia.org/wiki/List_of_SIP_response_codes
+            call.answer(180) # https://en.wikipedia.org/wiki/List_of_SIP_response_codes
             print("[AccountHandler]: Answered incoming call from ", call.info().remote_uri)
-
 
