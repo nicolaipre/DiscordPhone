@@ -7,3 +7,8 @@ The project depends on:
 - https://github.com/nicolaipre/pjproject/tree/py37
 
 For installation instructions, see [**INSTALL.md**](https://github.com/nicolaipre/DiscordPhone/blob/master/INSTALL.md).
+
+## Usage
+```sh
+python3 run.py -c dp.conf
+```
