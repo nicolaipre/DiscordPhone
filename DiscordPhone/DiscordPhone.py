@@ -211,6 +211,6 @@ class DiscordPhone(discord.Client):
         """
 
         if command.content.lower().startswith("!a"):
-            self.client.change_presence(discord.Game(name=f"Talking: halla"))
+            self.change_presence(discord.Game(name=f"Talking: halla"))
 
 
