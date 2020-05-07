@@ -16,7 +16,6 @@ from .Softphone.Softphone import Softphone
 from .Audio import AudioCB # Must be below softphone import if not pjmedia max ports error????
 from .Asterisk import Asterisk
 
-
 # Fix Discord Opus error
 discord.opus.load_opus(ctypes.util.find_library('opus'))
 discord.opus.is_loaded()
