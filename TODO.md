@@ -1,5 +1,7 @@
 # TODO
 
+- Fix when mobile hangs up before Discord
+- Add Nexmo API for sms
 - Use env variables instead of conf file for user + pass
 - enable incoming calls + get phone number for discord
 - https://github.com/CorentinJ/Real-Time-Voice-Cloning
