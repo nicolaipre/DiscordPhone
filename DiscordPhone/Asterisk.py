@@ -1,7 +1,7 @@
 import socket
 
 class Asterisk:
-    def __init__(self, host="127.0.0.1", port=5038, username="admin", password="admin"):
+    def __init__(self, host='127.0.0.1', port=5038, username='admin', password='admin'):
         self.host = host
         self.port = port
         self.username = username
@@ -23,23 +23,30 @@ class Asterisk:
             data += buf
         return data
         
-        
     def _login(self):
         """ Login to Asterisk CLI
         """
-        login = f"Action: Login\nActionID: 1\nUsername: {self.username}\nSecret: {self.password}\n\n"
+        login = f"""Action: Login\nActionID: 1\nUsername: {self.username}\nSecret: {self.password}\n\n"""
         self.conn.send(login.encode())
         resp = self._recv_response()
+
+        # Check if login failed
+        if b'Authentication failed' in resp:
+            return False
+
+        # Login succeeded, receive and throw away the junk response parts and return
         self._recv_response()
         self._recv_response()
         return b'Authentication accepted' in resp
-
 
     def set_caller_id(self, caller_id):
         """ Update caller ID in extensions.conf
             https://www.voip-info.org/setting-callerid/ <--- nice info om caller id
         """
-        self._login()
+        # Verify that we are logged in
+        if not self._login():
+            return False
+
         update_config = f"""Action: UpdateConfig
 Reload: yes
 Srcfilename: extensions.conf
@@ -52,4 +59,3 @@ Value-000000:>{caller_id}\n\n
 """
         self.conn.send(update_config.encode())
         return b'Response: Success' in self._recv_response()
-    

@@ -33,7 +33,7 @@ class DiscordPhone(discord.Client):
         # Audio
         self.softphone = None
         self.voiceclient = None
-        self.audio_buffer = AudioCB()
+        self.audio_buffer = None
 
         # Run subroutines
         #self.speakingUserString = "..."
@@ -77,9 +77,7 @@ class DiscordPhone(discord.Client):
 
 
     async def play_thread(self):
-        #print("Enter mf")
         self.voiceclient.play(self.audio_buffer)
-        #print("Leave mf")
 
 
 
@@ -133,7 +131,7 @@ class DiscordPhone(discord.Client):
             else:
                 await command.channel.send(f"Joining voice channel: {command.author.voice.channel.name}")
                 self.voiceclient = await command.author.voice.channel.connect()
-                #self.voiceclient.play("elevator-waiting-music.wav")
+
 
 
         # Call phone
@@ -141,7 +139,7 @@ class DiscordPhone(discord.Client):
             cmd = command.content.lower().split(" ") # ["!call", "97526703", "13371337"] # replace number in /etc/asterisk/extensions.conf, ssh?
 
             if len(cmd) != 3:
-                await command.channel.send("Correct usage: `!call <number to call (with country code)> <Caller ID>`")
+                await command.channel.send("Correct usage:  `!call <number to call (with country code)> <caller ID>`")
                 await command.channel.send("Example usage: `!call +4712345678 +4713371337`")
                 return
 
@@ -151,9 +149,8 @@ class DiscordPhone(discord.Client):
             # TODO: Fix this ghetto approach of replacing and stripping
             number_new    = number.replace("+", "00")
             caller_id_new = caller_id[1:] # Strip starting +
-            print(caller_id_new)
 
-            #sip_uri = 'sip:%s@%s:%s' % (number, self.config['server'], self.config['port'])
+            # Format SIP URI
             sip_uri = f"sip:{number_new}@{self.config['server']}:{self.config['port']}"
 
             try:
@@ -167,6 +164,7 @@ class DiscordPhone(discord.Client):
 
 
             try:
+                self.audio_buffer = AudioCB() # Prepare the buffer
                 self.softphone.create_audio_stream(self.audio_buffer) # Move this inside call maybe?
                 self.softphone.call(self.outbound, sip_uri)
                 self.softphone.wait_for_active_audio() # Wait for active audio before we listen...
@@ -177,9 +175,16 @@ class DiscordPhone(discord.Client):
                 # TODO: Why does play() have to be in its own loop? Is it not threaded??? It is blocking???
                 # This does not need them in own loop - https://github.com/RobotCasserole1736/CasseroleDiscordBotPublic/blob/master/casseroleBot.py#L141
                 loop = asyncio.get_event_loop()
-                loop.create_task(self.play_thread())# einar aka PythonGawd NeverForGet (hack the loop)
+                loop.create_task(self.play_thread()) # einar aka PythonGawd NeverForGet (hack the loop)
 
                 await command.channel.send(f"Calling: `{number}` with Caller-ID: `{caller_id}`")
+                await self.change_presence(
+                    status   = discord.Status.online,
+                    activity = discord.Activity(
+                        type = discord.ActivityType.listening,
+                        name = f"call: {number}"
+                    )
+                ) #
 
             except Exception as e:
                 await command.channel.send(f"Could not perform call - Error: {e}")
@@ -194,34 +199,19 @@ class DiscordPhone(discord.Client):
                 self.voiceclient.stop_playing()
                 self.voiceclient.stop_listening()
                 self.softphone.destroy_audio_stream() # Move this inside end_call maybe?
+                self.audio_buffer = None
                 await command.channel.send("Call ended.")
+                await self.change_presence(status=discord.Status.idle, activity=discord.Game(name="Idle... 💤"))
 
             except Exception as e:
                 await command.channel.send(f"Could not end call - Error: {e}")
 
-        """
-        # Unmute mic
-        if command.content.lower().startswith("!unmute"):
-            self.AudioCB.speakerIDList.append(command.message.author.id)
-            await command.channel.send(f"Adding user {command.message.author.name} to call.")
-
-
-        # Mute mic
-        if command.content.lower().startswith("!mute"):
-            self.AudioCB.speakerIDList.remove(command.message.author.id)
-            await command.channel.send(f"Removing user {command.message.author.name} from call.")
-        """
 
         if command.content.lower().startswith("!a"):
-            #await self.change_presence(
-            #    status   = discord.Status.idle,
-            #    activity = discord.Game(name="Test...")
-            #)
             await self.change_presence(
                 status   = discord.Status.online,
                 activity = discord.Activity(
                     type = discord.ActivityType.listening,
-                    name = "Call: x"
+                    name = "call: "
                 )
-            )
-
+            ) #

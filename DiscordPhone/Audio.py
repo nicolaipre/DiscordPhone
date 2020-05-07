@@ -5,16 +5,6 @@ import discord
 from collections import deque
 from discord.opus import Decoder, BufferedDecoder
 
-#print(Decoder.SAMPLE_SIZE)                   # num samples? # 4
-#print(Decoder.CHANNELS)                      # channels     # 2
-#print(Decoder.SAMPLE_SIZE//Decoder.CHANNELS) # sample width # 2
-#print(Decoder.SAMPLING_RATE)                 # sample_rate  # 48000
-
-#self._file.setnchannels(Decoder.CHANNELS)
-#self._file.setsampwidth(Decoder.SAMPLE_SIZE//Decoder.CHANNELS)
-#self._file.setframerate(Decoder.SAMPLING_RATE)
-
-
 class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
     def __init__(self, duration_ms=20, sample_rate=48000.0, channel_count=2):
@@ -35,9 +25,7 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
 
 
-
-
-    ### phone -> discord ###
+    # Phone --> Discord
 
     def cb_put_frame(self, frame): # Denne er good! Testet med loopback i telefon
         """ Listen to the audio coming from phone, and write to phone_audio buffer.
@@ -50,9 +38,6 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
         # Return an integer; 0 means success, but this does not matter now
         return 0
 
-
-
-    # Denne er fucka...
     def read(self):
         """ Read from discord_audio buffer, and send audio to phone.
 
@@ -71,14 +56,9 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
 
 
+    # Discord --> Phone
 
-
-
-
-
-    ### discord -> phone ### (denne er good = de to under er good...)
-
-    def write(self, voiceData): # Make this return 20 ms of data and be 640 bytes
+    def write(self, voiceData):
         """ Listen to the audio coming from Discord, and write to discord_audio buffer.
 
             Discord: Write method
@@ -110,7 +90,7 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
         self.speakers.append(speaker_id)
 
 
-    def cb_get_frame(self, size): # Denne er good! Testet med loopback i telefon
+    def cb_get_frame(self, size):
         """ Read from discord_audio buffer, and send audio to phone.
 
             Get an audio frame to be played into phone speaker.
@@ -121,4 +101,4 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
             frame = self.discord_audio.popleft()
             return frame
         else:
-            return None  # Do not emit an audio frame
+            return None
