@@ -211,6 +211,15 @@ class DiscordPhone(discord.Client):
         """
 
         if command.content.lower().startswith("!a"):
-            self.change_presence(discord.Game(name=f"Talking: halla"))
-
+            #await self.change_presence(
+            #    status   = discord.Status.idle,
+            #    activity = discord.Game(name="Test...")
+            #)
+            await self.change_presence(
+                status   = discord.Status.online,
+                activity = discord.Activity(
+                    type = discord.ActivityType.listening,
+                    name = "Call: x"
+                )
+            )
 
