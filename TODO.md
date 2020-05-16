@@ -8,6 +8,7 @@
 - Improve blacklist.json + matching
 - Check that specified config file exists
 
+- Add Mic + Speakers for testing so we dont have to call every time we test the Discord Part, since phone works good now.
 
 ## Not prioritized
 - Add better command handler with prefix etc..: https://stackoverflow.com/q/59126137
