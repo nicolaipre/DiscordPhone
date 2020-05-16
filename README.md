@@ -1,4 +1,4 @@
-# DiscordPhone
+![](assets/logo/discordphone.png)
 
 This Discord bot will let you call phone numbers directly from Discord, and even allow you to specify a custom caller ID.
 
