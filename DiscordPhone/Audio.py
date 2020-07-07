@@ -2,8 +2,8 @@
 # -*- coding: latin-1 -*-
 
 import discord
+from sounddevice import sd
 from collections import deque
-from discord.opus import Decoder, BufferedDecoder
 
 class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
 
@@ -102,3 +102,47 @@ class AudioCB(discord.PCMAudio, discord.reader.AudioSink):
             return frame
         else:
             return None
+
+
+
+
+
+
+
+
+
+
+class MicrophoneAudioSource:
+    """ Receive audio from system microphone (source).
+    """
+    def __init__(self, duration_ms=20, sample_rate=48000.0, channel_count=2):
+        self.duration_ms = duration_ms
+        self.sample_rate = sample_rate
+        self.sample_period_sec = 1.0/self.sample_rate
+        self.samples_per_frame = int((duration_ms/1000.0) / self.sample_period_sec)
+        self.audio_stream = sd.RawInputStream(samplerate=self.sample_rate, channels=channel_count, dtype='int16', blocksize=self.samples_per_frame)
+        self.audio_stream.start()
+
+
+    def read(self):
+        ret = self.audio_stream.read(self.samples_per_frame)
+        raw_samples = bytes(ret[0])
+        return raw_samples
+
+
+
+class SpeakerAudioSink:
+    """ Send audio to system speaker (sink).
+    """
+    def __init__(self, duration_ms=20, sample_rate=48000.0, channel_count=2):
+        self.duration_ms = duration_ms
+        self.sample_rate = sample_rate
+        self.sample_period_sec = 1.0/self.sample_rate
+        self.samples_per_frame = int((duration_ms/1000.0) / self.sample_period_sec)
+        self.audio_stream = sd.RawOutputStream(samplerate=self.sample_rate, channels=channel_count, dtype='int16', blocksize=self.samples_per_frame)
+        self.audio_stream.start()
+
+
+    def write(self, data):
+        self.audio_stream.write(data)
+
