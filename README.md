@@ -1,4 +1,9 @@
 ![](assets/logo/discordphone-new.png)
+[![Release](https://img.shields.io/github/release/nicolaipre/idshandler.svg)](https://github.com/nicolaipre/idshandler/releases)
+[![Stars](https://img.shields.io/github/stars/nicolaipre/idshandler.svg)](https://github.com/nicolaipre/idshandler/stargazers)
+[![Contributors](https://img.shields.io/github/contributors/nicolaipre/idshandler.svg)](https://github.com/nicolaipre/idshandler/graphs/contributors)
+[![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://github.com/nicolaipre/idshandler/blob/master/LICENSE)
+[![Discord](https://img.shields.io/discord/568467524170022912.svg)](https://discord.gg/vCjnpVc)
 
 This Discord bot will let you call phone numbers directly from Discord, and allow you to specify a custom caller ID.
 
