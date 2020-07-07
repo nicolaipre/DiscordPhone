@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
-
 import argparse
 import configparser
 import logging
+
 from DiscordPhone.DiscordPhone import DiscordPhone
+from DiscordPhone.Errors import ConfigNotFoundError
+from os import path
 
 # Initialize logging # TODO: Fix full logging
 logging.basicConfig(
@@ -16,11 +18,15 @@ logging.basicConfig(
 )
 #self.logger = logging.getLogger('urbanGUI')
 
-# Parse CLI arguments # TODO: Check if config file exists
+# Parse CLI arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="Config file to use", required=True)
 parser.parse_args()
 args = parser.parse_args()
+
+# Checks if configs exists, if not trigger custom error.
+if (path.exists(args.config)) == False:
+	raise ConfigNotFoundError(args.config)
 
 # Read specified config
 config = configparser.ConfigParser()
