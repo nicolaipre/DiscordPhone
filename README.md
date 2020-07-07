@@ -4,9 +4,9 @@ This Discord bot will let you call phone numbers directly from Discord, and even
 
 The project depends on:
 - https://github.com/imayhaveborkedit/discord.py
-- https://github.com/nicolaipre/pjproject/tree/py37
+- https://github.com/DiscordPhone/pjproject/tree/py37
 
-For installation instructions, see [**assets/INSTALL.md**](https://github.com/nicolaipre/DiscordPhone/blob/master/INSTALL.md).
+For installation instructions, see [**assets/INSTALL.md**](https://github.com/DiscordPhone/DiscordPhone/blob/master/INSTALL.md).
 
 ## Usage
 ```bash
