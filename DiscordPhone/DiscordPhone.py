@@ -12,7 +12,9 @@ import ctypes
 import socket
 import ctypes.util
 
-from .Softphone.Softphone import Softphone
+# New import
+from pjsip-softphone import Softphone
+
 from .Audio import AudioCB # Must be below softphone import if not pjmedia max ports error????
 from .Asterisk import Asterisk
 
