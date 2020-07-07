@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: latin-1 -*-
-# Built with pjproject: https://github.com/nicolaipre/pjproject
-# It is important to use this ^ fork!
 
 import os
 import sys
