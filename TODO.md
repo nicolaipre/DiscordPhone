@@ -9,6 +9,9 @@
 - Check that specified config file exists
 
 - Add Mic + Speakers for testing so we dont have to call every time we test the Discord Part, since phone works good now.
+- Test by setting Python threads = 1 in pjsip library (see if it helps with delay)
+- Make a separate repository for pjsip-softphone, and move softphone out.
+- Add mic/speaker source/sink for discordphone and softphone and test which one has delay.
 
 ## Not prioritized
 - Add better command handler with prefix etc..: https://stackoverflow.com/q/59126137
