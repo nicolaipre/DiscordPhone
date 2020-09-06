@@ -6,7 +6,7 @@ ENV TZ=Europe/Oslo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Try to avoid cache while testing
-ARG CACHEBUST=1| 
+ARG CACHEBUST=1|
 
 # TODO: Add for better sec.
 # RUN useradd --create-home discordphone
@@ -24,9 +24,9 @@ RUN apt-get update && \
     unzip \
     git \
     libasound2-dev \
-    libportaudio2 \ 
-    libopus0 \ 
-    libsodium23 \ 
+    libportaudio2 \
+    libopus0 \
+    libsodium23 \
     libffi-dev \
     ffmpeg \
     ca-certificates \
