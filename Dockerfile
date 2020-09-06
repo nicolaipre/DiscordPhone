@@ -6,7 +6,7 @@ ENV TZ=Europe/Oslo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Try to avoid cache while testing
-ARG CACHEBUST=1|
+ARG CACHEBUST=1| 
 
 # Install Packages from APT !
 RUN apt-get update && \
