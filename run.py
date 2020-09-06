@@ -4,9 +4,7 @@
 import logging
 from os import environ as env
 from dotenv import load_dotenv
-#from DiscordPhone.DebugVersion import DiscordPhone
 from discordphone.DiscordPhone import DiscordPhone
-from discordphone.Errors import ConfigNotFoundError
 
 load_dotenv(dotenv_path='.env')
 
