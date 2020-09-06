@@ -1,5 +1,5 @@
 # Installation
-Follow the instructions below to set up DiscordPhone.
+Follow the instructions below to set up DiscordPhone without Docker.
 
 ---
 ## Dependencies

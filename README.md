@@ -10,7 +10,7 @@
 
 This Discord bot will let you call phone numbers directly from Discord, and allow you to specify a custom caller ID.
 
-For installation instructions, click [here](INSTALL.md).
+For installation instructions without Docker, click [here](INSTALL.md).
 
 ---
 ## Usage
