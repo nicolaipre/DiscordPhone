@@ -14,10 +14,11 @@ For installation instructions without Docker, click [here](INSTALL.md).
 
 ---
 ## Usage
-Remember to adjust the settings in .env before continuing.
+Remember to set environment variables in `.env` before building.
 ```bash
 git clone git@github.com:DiscordPhone/DiscordPhone.git
 cd DiscordPhone
+mv .env.tmpl .env
 sudo docker build .
 sudo docker run <image-id>
 ```
