@@ -6,7 +6,8 @@ import logging
 import sounddevice as sd
 from collections import deque
 
-# IMPORTANT NOTE: Remember to set sample_rate to be same as system audio. Can be checked with command "$ pacmd list-sinks | grep 'sample spec'"
+# NOTE: Remember to set sample_rate to be same as system audio. But does it even help..?
+# Can be checked with command "$ pacmd list-sinks | grep 'sample spec'"
 
 logger = logging.getLogger(__name__)
 
