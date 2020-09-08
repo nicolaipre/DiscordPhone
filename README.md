@@ -26,6 +26,7 @@ sudo docker run <image-id>
 ---
 ## TODO
 - [ ] Fix audio lag in DiscordPhone/softphone repo.
+- [ ] Fix bot dying because of library already existing error when left idle for x minutes. 
 - [ ] Fix static frame size (3840) in AudioCB - only works with 48000 hz sample rate at the moment.
 - [ ] Add SMS support.
 - [ ] Add a separate Mixer class for multiple speakers that can be used with sinks.
