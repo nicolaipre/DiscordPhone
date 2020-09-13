@@ -36,3 +36,7 @@ sudo docker run <image-id>
 - [ ] Add voice changer.
 - [ ] Clean up the code.
 - [ ] Write documentation for all functions.
+
+---
+## Disclaimer / ToS
+The users of DiscordPhone accept unlimited liability for any risks they undertake, and upon use confirm that the developers of DiscordPhone should not be held responsible for the user's actions.
