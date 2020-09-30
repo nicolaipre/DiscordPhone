@@ -195,6 +195,7 @@ class VoiceClient:
             return
 
         self.endpoint = endpoint.replace(':80', '')
+        self.endpoint = endpoint.replace(':443', '')
         self.endpoint_ip = socket.gethostbyname(self.endpoint)
 
         if self.socket:

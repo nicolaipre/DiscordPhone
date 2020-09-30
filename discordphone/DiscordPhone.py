@@ -138,6 +138,7 @@ class DiscordPhone(discord.Client):
             else:
                 await command.channel.send(f"Joining voice channel: {command.author.voice.channel.name}")
                 self.voiceclient = await command.author.voice.channel.connect()
+                print("fuck")
                 logger.info("Joining voice channel")
 
 
@@ -196,8 +197,8 @@ class DiscordPhone(discord.Client):
                 self.softphone.wait_for_active_audio() # Wait for active audio before we listen...
 
                 logger.info("Attempting to listen to audio")
-                #self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author)) # Single speaker
-                self.voiceclient.listen(self.audio_buffer) # Multiple speakers, lol works.
+                self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author)) # Single speaker
+                #self.voiceclient.listen(self.audio_buffer) # Multiple speakers, lol works.
 
                 logger.info("Attempting to play audio")
                 self.voiceclient.play(self.audio_buffer) # does it work here afterall?
