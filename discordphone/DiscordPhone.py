@@ -47,6 +47,8 @@ class DiscordPhone(discord.Client):
             # TODO: Add more...
         ]
 
+        self.x = None
+
 
     def __del__(self):
         try:
@@ -82,6 +84,22 @@ class DiscordPhone(discord.Client):
             return True
         return False
 
+
+    # FIXME: Required to detect when a call ends, so we stop audio transmission...
+    """
+    def detect_ended_call(self): # https://github.com/g-farrow/soft_phone/blob/808131342d19fb5fd8c95fcc01f8a57c699af993/soft_phone/soft_phone.py#L228
+        while self.softphone.current_call.is_valid():
+            logger.info(f"{self.softphone.current_call}, {self.softphone.call_handler.call}")
+            time.sleep(0.5)
+
+        logger.info("Call has ended. Stopping audio transmission")
+        self.voiceclient.stop_playing()
+        self.voiceclient.stop_listening()
+        self.softphone.destroy_audio_stream()
+        logger.info("Stopped audio!")
+        # self.x.join() # got 2 love race conditions!
+    """
+
     # Handle commands TODO: replace with decorator command handling..?
     async def on_message(self, command):
 
@@ -96,6 +114,7 @@ class DiscordPhone(discord.Client):
 !join   -   join a voice channel
 !leave  -   leave a voice channel
 !quit   -   shut down bot
+!mic    -   take ownership of mic.
 !hop    -   hop to voice channel
 !call   -   call a phone number
 !hangup -   end a call
@@ -127,6 +146,10 @@ class DiscordPhone(discord.Client):
             if self.voiceclient:
                 await self.voiceclient.move_to(command.author.voice.channel)
                 logger.info("Hopped to new voice channel")
+
+            elif command.author.voice is None:
+                await command.channel.send("Sorry, you are not in a voice channel.")
+
             else:
                 await command.channel.send("Sorry, I am not in a voice channel. You will have to summon me first.")
 
@@ -136,18 +159,28 @@ class DiscordPhone(discord.Client):
             if command.author.voice is None:
                 await command.channel.send("Sorry, you are not in a voice channel.")
             else:
-                await command.channel.send(f"Joining voice channel: {command.author.voice.channel.name}")
+                logger.info("Joining voice channel and connecting to gateway")
+                await command.channel.send(f"Joining voice channel and attempting to connect to gateway.")
                 self.voiceclient = await command.author.voice.channel.connect()
-                print("fuck")
-                logger.info("Joining voice channel")
+                await command.channel.send(f"Successfully connected to `{command.author.voice.channel.name}`.")
+                logger.info("Successfully connected to voice gateway")
 
 
         # Call phone
         elif command.content.lower().startswith("!call"): # !call <number> <spoofs>
+            if command.author.voice is None:
+                await command.channel.send("Sorry, you are not in a voice channel.")
+                return
+
+            if not self.voiceclient:
+                await command.channel.send("Sorry, I am not in a voice channel...")
+                return
+
+            # Ok in voice channel. Nice. 
             cmd = command.content.lower().split(" ")
 
             if len(cmd) != 3:
-                await command.channel.send("Correct usage:  `!call <number to call (with country code)> <caller ID>`.")
+                await command.channel.send("Correct usage:  `!call <number to call (with country code)> <caller-ID>`.")
                 await command.channel.send("Example usage: `!call +4512345678 +4513371337`.")
                 return
 
@@ -212,10 +245,36 @@ class DiscordPhone(discord.Client):
                     )
                 ) #
 
+                #import threading
+                #self.x = threading.Thread(target=self.detect_ended_call)
+                #self.x.start()
+                # Wait for / Detect end of call
+                #await self.detect_ended_call()
+                #print(self.softphone.current_call)
+
+
             except Exception as e:
                 await command.channel.send(f"Could not perform call. Error: {e}")
                 return
 
+
+        # Take ownership of voice
+        elif command.content.lower().startswith("!mic"):
+            if command.author.voice is None:
+                await command.channel.send("Sorry, you are not in a voice channel.")
+                return
+
+            if not self.voiceclient:
+                await command.channel.send("Sorry, I am not in a voice channel...")
+                return
+
+            if self.softphone.current_call == None:
+                await command.channel.send(f"Error: A call must have been started by someone else before you try taking the mic.")
+                return
+
+            await command.channel.send(f"`{command.author}` has taken the mic!")
+            self.voiceclient.stop_listening()
+            self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author)) # Single speaker
 
 
         # Hangup phone call
@@ -230,7 +289,7 @@ class DiscordPhone(discord.Client):
                 logger.info("Attempting to stop listening for audio")
                 self.voiceclient.stop_listening()
 
-                logger.info("Destroying audio streams")
+                logger.info("Attempting to destroy audio streams")
                 self.softphone.destroy_audio_stream() # Move this inside end_call maybe?
 
                 await command.channel.send("Call ended.")
@@ -241,13 +300,9 @@ class DiscordPhone(discord.Client):
 
 
         elif command.content.lower().startswith("!a"):
-            await self.change_presence(
-                status   = discord.Status.online,
-                activity = discord.Activity(
-                    type = discord.ActivityType.listening,
-                    name = "call: "
-                )
-            ) #
+            #print(self.softphone.current_call)
+            await command.channel.send(f"Call duration: `{self.softphone.get_call_length()} sec.`")
+            pass
 
         
         # Trigger a 'wut-da-hell' on unknown command
