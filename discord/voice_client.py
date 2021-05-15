@@ -196,6 +196,7 @@ class VoiceClient:
 
         self.endpoint = endpoint.replace(':80', '')
         self.endpoint = endpoint.replace(':443', '')
+        print("ATTMEPTING TO CONNECT TO {endpoint}")
         self.endpoint_ip = socket.gethostbyname(self.endpoint)
 
         if self.socket:

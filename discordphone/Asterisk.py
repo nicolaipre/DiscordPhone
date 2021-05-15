@@ -61,4 +61,5 @@ Match-000000:
 Value-000000:>{caller_id}\n\n
 """
         self.conn.send(update_config.encode())
+        print("Update_config:", update_config.encode())
         return b'Response: Success' in self._recv_response()

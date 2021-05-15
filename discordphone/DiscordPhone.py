@@ -115,6 +115,7 @@ class DiscordPhone(discord.Client):
 !leave  -   leave a voice channel
 !quit   -   shut down bot
 !mic    -   take ownership of mic.
+!all    -   listen to everyone!
 !hop    -   hop to voice channel
 !call   -   call a phone number
 !hangup -   end a call
@@ -176,7 +177,7 @@ class DiscordPhone(discord.Client):
                 await command.channel.send("Sorry, I am not in a voice channel...")
                 return
 
-            # Ok in voice channel. Nice. 
+            # Ok in voice channel. Nice.
             cmd = command.content.lower().split(" ")
 
             if len(cmd) != 3:
@@ -272,10 +273,33 @@ class DiscordPhone(discord.Client):
                 await command.channel.send(f"Error: A call must have been started by someone else before you try taking the mic.")
                 return
 
-            await command.channel.send(f"`{command.author}` has taken the mic!")
+            await command.channel.send(f"`{command.author}` has taken the mic!`")
             self.voiceclient.stop_listening()
             self.voiceclient.listen(discord.UserFilter(self.audio_buffer, command.author)) # Single speaker
 
+
+        # Listen to everyone!
+        elif command.content.lower().startswith("!all"):
+            if command.author.voice is None:
+                await command.channel.send("Sorry, you are not in a voice channel.")
+                return
+
+            if not self.voiceclient:
+                await command.channel.send("Sorry, I am not in a voice channel...")
+                return
+
+            if self.softphone.current_call == None:
+                await command.channel.send(f"Error: A call must have been started by someone else before you try taking the mic.")
+                return
+            
+            await command.channel.send(f"`Mic is open to everyone!`")
+            self.voiceclient.stop_listening()
+            self.voiceclient.listen(self.audio_buffer) # Multiple speakers
+
+
+        # Listen to DiscordPhone
+        elif command.content.lower().startswith("!self"):
+            await command.channel.send(f"@mic")
 
         # Hangup phone call
         elif command.content.lower().startswith("!hangup"):
