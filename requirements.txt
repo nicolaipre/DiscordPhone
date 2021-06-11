@@ -10,5 +10,5 @@ PyNaCl==1.4.0
 python-dotenv==0.14.0
 six==1.15.0
 sounddevice==0.3.15
-websockets==8.1
+websockets==9.1
 yarl==1.4.2
