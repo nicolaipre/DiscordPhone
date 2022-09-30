@@ -177,7 +177,7 @@ class DiscordPhone(discord.Client):
                 await command.channel.send("Sorry, I am not in a voice channel...")
                 return
 
-            # Ok in voice channel. Nice.
+            # Ok in voice channel. 69. Nice.
             cmd = command.content.lower().split(" ")
 
             if len(cmd) != 3:
